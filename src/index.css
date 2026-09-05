@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  /* brand */
+  --color-teal: #1B6B45;
+  --color-teal-dark: #124A2F;
+  --color-gold: #E8A93E;
+  --color-gold-dark: #C88A20;
+
+  /* text + layout */
+  --color-navy: #1B2A4A;
+  --color-navy-soft: #4A5772;
+  --color-surface: #F5F6F5;
+  --color-border: #E2E4E0;
+  --color-border-strong: #C9CDC6;
+
+  /* status colors, for badges later */
+  --color-green-bg: #E7F3EC;
+  --color-green-text: #124A2F;
+  --color-amber-bg: #FDF3DD;
+  --color-amber-text: #8A5A00;
+  --color-red-bg: #FBE9E8;
+  --color-red-text: #B3261E;
+
+  /* aliases — some components (Input/Select/Textarea) use these
+     semantic names instead of our brand names above. Same colors,
+     different labels. */
+  --color-danger: #B3261E;  /* = red-text */
+  --color-muted: #4A5772;   /* = navy-soft */
+  --color-body: #1B2A4A;    /* = navy */
+
+  /* shape */
+  --radius-field: 8px;   /* buttons, inputs, selects, textareas */
+  --radius-card: 10px;   /* Card.jsx — was undefined, corners were square until now */
+}
+
+@layer utilities {
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-page {
+    animation: fade-in-up 0.25s ease-out;
+  }
+
+  /* Gentle up-down float, used by the hero illustration cards on
+     LandingPage.jsx. Runs forever, unlike animate-page which only
+     plays once on mount. */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%      { transform: translateY(-10px); }
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+}

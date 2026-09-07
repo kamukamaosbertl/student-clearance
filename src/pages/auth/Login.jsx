@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AppShell from "../../components/layout/AppShell";
+
+import AuthShell from "../../components/layout/AuthShell";
 import PageHeader from "../../components/layout/PageHeader";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
@@ -9,34 +10,71 @@ import { validateRegNo, validatePassword } from "../../utils/validators";
 
 export default function Login() {
   const navigate = useNavigate();
+
   const [regNo, setRegNo] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({ regNo: "", password: "" });
+
+  const [errors, setErrors] = useState({
+    regNo: "",
+    password: "",
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const nextErrors = { regNo: validateRegNo(regNo), password: validatePassword(password) };
-    setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
 
-    // TODO: call the real auth endpoint here; on a wrong-credentials
-    // response, do setErrors(prev => ({ ...prev, password: "Incorrect registration number or password." }))
-    navigate("/clearance/personal");
+    const nextErrors = {
+      regNo: validateRegNo(regNo),
+      password: validatePassword(password),
+    };
+
+    setErrors(nextErrors);
+
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    // TODO: Replace this with the real authentication request.
+    navigate("/dashboard");
   };
 
   return (
-    <AppShell>
+    <AuthShell>
+      {/* Back to landing page */}
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="mb-1 flex w-fit items-center gap-2 text-[13.5px] font-semibold text-navy-soft transition-colors hover:text-teal"
+      >
+        <span aria-hidden="true">←</span>
+        Back to home
+      </button>
+
+      {/* Page introduction */}
       <PageHeader
-        eyebrow="Student"
-        title="Clearance forms"
-        description="Every screen a graduating student fills in, validated before it reaches the workflow."
+        eyebrow="Student Portal"
+        title="Welcome back"
+        description="Sign in to access your graduation clearance and track your progress."
       />
 
-      <Card className="w-[420px]">
-        <h2 className="text-[17px] font-semibold text-navy">Student login</h2>
-        <p className="text-[13.5px] text-navy-soft">Sign in to continue to your dashboard.</p>
+      {/* Login card */}
+      <Card className="p-6 md:p-7">
+        <div className="mb-6">
+          <h2 className="text-[19px] font-semibold text-navy">
+            Student login
+          </h2>
 
-        <form onSubmit={handleSubmit} noValidate autoComplete="off" className="flex flex-col gap-4">
+          <p className="mt-1 text-[13.5px] leading-relaxed text-navy-soft">
+            Enter your registration number and password to continue.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          autoComplete="off"
+          className="flex flex-col gap-5"
+        >
+          {/* Registration number */}
           <Input
             label="Registration number"
             required
@@ -46,29 +84,53 @@ export default function Login() {
             placeholder="2023/BSE/058/PS"
             value={regNo}
             onChange={(e) => setRegNo(e.target.value)}
-            onBlur={() => setErrors((prev) => ({ ...prev, regNo: validateRegNo(regNo) }))}
+            onBlur={() =>
+              setErrors((prev) => ({
+                ...prev,
+                regNo: validateRegNo(regNo),
+              }))
+            }
             error={errors.regNo}
-            hint="Format: 2023/BSE/058/PS"
+            hint="Example: 2023/BSE/058/PS"
           />
 
+          {/* Password */}
           <Input
             label="Password"
             required
             type="password"
             name="password"
             autoComplete="new-password"
-            placeholder="••••••••"
+            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onBlur={() => setErrors((prev) => ({ ...prev, password: validatePassword(password) }))}
+            onBlur={() =>
+              setErrors((prev) => ({
+                ...prev,
+                password: validatePassword(password),
+              }))
+            }
             error={errors.password}
           />
 
-          <Button type="submit" className="w-full">
+          {/* Login button */}
+          <Button
+            type="submit"
+            className="mt-1 w-full py-3"
+          >
             Log in
           </Button>
         </form>
+
+        {/* Help message */}
+        <div className="mt-6 border-t border-border pt-5 text-center">
+          <p className="text-[12.5px] leading-relaxed text-navy-soft">
+            Having trouble accessing your account?
+            <br />
+            Please contact the appropriate university office for assistance.
+          </p>
+        </div>
       </Card>
-    </AppShell>
+    </AuthShell>
   );
 }

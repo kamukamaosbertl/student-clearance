@@ -1,4 +1,5 @@
 import Header from "./Header";
+import Footer from "../Footer";
 
 // Lightweight shell for standalone auth screens (Officer/Admin login,
 // password reset, etc.) — reuses the same Header as AppShell, but
@@ -12,9 +13,14 @@ export default function AuthShell({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-surface">
       <Header />
-      <main className="flex flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[440px] animate-page">{children}</div>
+
+      <main className="flex flex-1 items-start justify-center px-6 py-16">
+        <div className="flex w-full max-w-[560px] flex-col gap-6 animate-page">
+          {children}
+        </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

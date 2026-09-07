@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { studentNavItems, officerNavItems, adminNavItems } from "../../data/navigation";
+import { useClearanceForm } from "../../context/ClearanceFormContext";
 
 // Decides which nav list (and caption, if any) to show, based on the
 // route — same idea as the student-only version, just extended to
@@ -13,17 +14,26 @@ import { studentNavItems, officerNavItems, adminNavItems } from "../../data/navi
 // carry a section label the way the student list does.
 function getSection(pathname) {
   if (pathname.startsWith("/officer")) {
-    return { caption: null, items: officerNavItems.filter((item) => item.key !== "login") };
+    return {
+      role: "officer",
+      caption: null,
+      items: officerNavItems.filter((item) => item.key !== "login"),
+    };
   }
   if (pathname.startsWith("/admin")) {
-    return { caption: null, items: adminNavItems.filter((item) => item.key !== "login") };
+    return {
+      role: "admin",
+      caption: null,
+      items: adminNavItems.filter((item) => item.key !== "login"),
+    };
   }
-  return { caption: "Student screens", items: studentNavItems };
+  return { role: "student", caption: "Student screens", items: studentNavItems };
 }
 
 export default function Sidebar() {
   const { pathname } = useLocation();
-  const { caption, items } = getSection(pathname);
+  const { hasStarted } = useClearanceForm();
+  const { role, caption, items } = getSection(pathname);
 
   return (
     <aside className="flex w-[250px] shrink-0 flex-col gap-5 border-r border-border bg-white px-4 py-5">
@@ -41,6 +51,12 @@ export default function Sidebar() {
 
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => {
+          // Lock-until-started only applies to the student section —
+          // Officer/Admin have no equivalent "hasStarted" concept.
+          // Dashboard itself is always accessible, since it's the only
+          // way IN to starting the wizard.
+          const isLocked = role === "student" && item.key !== "dashboard" && !hasStarted;
+
           const isActive =
             item.key === "clearance-request"
               ? pathname.startsWith("/clearance") &&
@@ -49,6 +65,25 @@ export default function Sidebar() {
               : item.key === "request-review"
               ? pathname.startsWith("/officer/request")
               : pathname === item.path;
+
+          if (isLocked) {
+            // Rendered as a non-clickable, greyed row with a lock icon —
+            // visible so the student knows the screen exists, but can't
+            // be clicked into before they've started clearance.
+            return (
+              <span
+                key={item.key}
+                title="Start your clearance request first"
+                className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2.5 text-[14px] text-navy-soft/40"
+              >
+                <svg viewBox="0 0 16 16" fill="none" className="size-3.5 shrink-0" aria-hidden="true">
+                  <rect x="3" y="7" width="10" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                {item.label}
+              </span>
+            );
+          }
 
           return (
             <Link

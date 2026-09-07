@@ -18,10 +18,10 @@ export default function Header() {
       {/* Thin top strip */}
       <div className="h-1 bg-[#14181C]" aria-hidden="true" />
 
-      {/* Gold utility bar */}
+      {/* Gold utility bar 
       <div className="bg-gold px-6 py-2 text-[13px] font-medium text-[#3A2C00] md:px-8">
         MUST Clearance — graduating student portal
-      </div>
+      </div>*/}
 
       {/* Main header */}
       <div className="flex items-center gap-6 border-b border-border bg-white px-6 py-3.5 md:px-8">

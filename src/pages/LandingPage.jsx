@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 import Footer from "../components/Footer";
+
 import {
   IconDocument,
   IconBuilding,
@@ -16,6 +17,7 @@ import submitImage from "../assets/submit.jpg";
 import reviewImage from "../assets/review.jpg";
 import clearedImage from "../assets/cleared.jpg";
 import clearanceGuideImage from "../assets/MUST Clearance Step-Guide Infographic.png";
+
 const steps = [
   {
     icon: IconDocument,
@@ -69,21 +71,23 @@ const features = [
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-surface">
-      {/* Navigation */}
+      
+      {/* ==================== NAVIGATION ==================== */}
       <header className="border-b border-border bg-white px-6 py-4 md:px-12">
         <div className="mx-auto flex max-w-[1160px] items-center gap-8">
+          
           <Link
             to="/"
-            className="flex items-center gap-2.5"
+            className="group flex items-center gap-2.5"
             aria-label="MUST Clearance home"
           >
             <img
               src={mustBadge}
               alt="MUST badge"
-              className="size-9 shrink-0 object-contain"
+              className="size-9 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
             />
 
-            <span className="text-[18px] font-bold text-teal">
+            <span className="text-[18px] font-bold text-teal transition-colors duration-200 group-hover:text-teal-dark">
               MUST Clearance
             </span>
           </Link>
@@ -91,30 +95,34 @@ export default function LandingPage() {
           <nav className="ml-auto hidden items-center gap-7 text-[14px] font-semibold text-navy md:flex">
             <a
               href="#how-it-works"
-              className="transition-colors hover:text-teal"
+              className="transition-all duration-200 hover:-translate-y-0.5 hover:text-teal"
             >
               How it works
             </a>
 
             <a
               href="#features"
-              className="transition-colors hover:text-teal"
+              className="transition-all duration-200 hover:-translate-y-0.5 hover:text-teal"
             >
               Why it helps
             </a>
           </nav>
 
           <Link to="/login">
-            <Button className="ml-2 md:ml-0">Log in</Button>
+            <Button className="ml-2 transition-transform duration-200 hover:-translate-y-0.5 md:ml-0">
+              Log in
+            </Button>
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
+
+      {/* ==================== HERO ==================== */}
       <section className="animate-page px-6 py-16 md:px-12 md:py-24">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 md:grid-cols-2">
+          
           <div className="flex flex-col gap-6">
-            <span className="w-fit rounded-full bg-green-bg px-3 py-1 text-[12.5px] font-semibold text-teal-dark">
+            <span className="w-fit rounded-full bg-green-bg px-3 py-1 text-[12.5px] font-semibold text-teal-dark transition-transform duration-300 hover:scale-[1.02]">
               Mbarara University of Science and Technology
             </span>
 
@@ -132,38 +140,48 @@ export default function LandingPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Link to="/login">
-                <Button className="px-7 py-3 text-[15px]">
+                <Button className="px-7 py-3 text-[15px] transition-transform duration-200 hover:-translate-y-1">
                   Start your clearance
                 </Button>
               </Link>
 
               <a href="#how-it-works">
-                <Button variant="secondary" className="px-7 py-3 text-[15px]">
+                <Button
+                  variant="secondary"
+                  className="px-7 py-3 text-[15px] transition-transform duration-200 hover:-translate-y-1"
+                >
                   See how it works
                 </Button>
               </a>
             </div>
           </div>
 
+
+          {/* Animated hero visual */}
           <div className="relative mx-auto flex h-[360px] w-full max-w-[460px] items-center justify-center">
+            
+            {/* Soft background shape */}
             <div
-              className="absolute inset-3 rounded-[34px] bg-green-bg"
+              className="absolute inset-3 rounded-[34px] bg-green-bg transition-transform duration-700 hover:scale-[1.03]"
               aria-hidden="true"
             />
 
+            {/* Floating image */}
             <img
               src={heroImage}
               alt="Student completing university clearance online"
-              className="relative z-10 max-h-[340px] w-full object-contain"
+              className="relative z-10 max-h-[340px] w-full object-contain animate-float transition-transform duration-500 hover:scale-[1.02]"
             />
           </div>
         </div>
       </section>
 
-      {/* Clearance Guide */}
+
+      {/* ==================== CLEARANCE GUIDE ==================== */}
       <section className="border-y border-border bg-white px-6 py-12 md:px-12 md:py-16">
         <div className="mx-auto max-w-[1160px]">
-          <div className="mx-auto mb-8 max-w-[560px] text-center">
+          
+          <div className="mx-auto mb-8 max-w-[560px] text-center animate-page">
             <p className="text-[13px] font-semibold text-teal">
               Your clearance journey
             </p>
@@ -173,20 +191,24 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+
+          {/* Interactive guide image */}
+          <div className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
             <img
               src={clearanceGuideImage}
               alt="MUST Clearance step-by-step guide"
-              className="block h-auto w-full object-cover"
+              className="block h-auto w-full object-cover transition-transform duration-700 group-hover:scale-[1.015]"
             />
           </div>
         </div>
       </section>
 
-      {/* How it works */}
+
+      {/* ==================== HOW IT WORKS ==================== */}
       <section id="how-it-works" className="px-6 py-20 md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <div className="mx-auto mb-12 max-w-[560px] text-center">
+          
+          <div className="mx-auto mb-12 max-w-[560px] text-center animate-page">
             <p className="text-[13px] font-semibold text-teal">
               How it works
             </p>
@@ -196,7 +218,9 @@ export default function LandingPage() {
             </h2>
           </div>
 
+
           <div className="relative grid gap-6 md:grid-cols-4">
+            
             <div
               className="pointer-events-none absolute left-[12%] right-[12%] top-11 hidden border-t border-dashed border-border md:block"
               aria-hidden="true"
@@ -205,19 +229,21 @@ export default function LandingPage() {
             {steps.map((step, i) => (
               <div
                 key={step.title}
-                className="group animate-page relative z-10 rounded-2xl border border-border bg-white p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                className="group animate-page relative z-10 rounded-2xl border border-border bg-white p-6 transition-all duration-300 hover:-translate-y-2 hover:border-teal/30 hover:shadow-xl"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
+                
+                {/* Step image — KEPT AS YOUR ORIGINAL IMAGES */}
                 <div className="mb-4 h-28 overflow-hidden rounded-xl bg-green-bg">
                   <img
                     src={step.image}
                     alt=""
-                    className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                    className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
                     aria-hidden="true"
                   />
                 </div>
 
-                <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-green-bg text-teal-dark">
+                <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-green-bg text-teal-dark transition-all duration-300 group-hover:scale-110 group-hover:bg-teal group-hover:text-white">
                   <step.icon className="size-5" />
                 </div>
 
@@ -238,10 +264,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
+
+      {/* ==================== FEATURES ==================== */}
       <section id="features" className="bg-white px-6 py-20 md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <div className="mx-auto mb-12 max-w-[560px] text-center">
+          
+          <div className="mx-auto mb-12 max-w-[560px] text-center animate-page">
             <p className="text-[13px] font-semibold text-teal">
               Why it helps
             </p>
@@ -251,18 +279,21 @@ export default function LandingPage() {
             </h2>
           </div>
 
+
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {features.map((f, i) => (
               <div
                 key={f.title}
-                className="animate-page rounded-2xl border border-border bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-teal/30 hover:shadow-lg"
+                className="group animate-page rounded-2xl border border-border bg-surface p-6 transition-all duration-300 hover:-translate-y-2 hover:border-teal/30 hover:bg-white hover:shadow-xl"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
-                <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-teal text-white">
-                  <f.icon className="size-5.5" />
+                
+                {/* Animated feature icon */}
+                <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-teal text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <f.icon className="size-5.5 transition-transform duration-300 group-hover:scale-110" />
                 </div>
 
-                <h3 className="mb-1.5 text-[15px] font-semibold text-navy">
+                <h3 className="mb-1.5 text-[15px] font-semibold text-navy transition-colors duration-200 group-hover:text-teal">
                   {f.title}
                 </h3>
 
@@ -275,28 +306,33 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Closing CTA */}
+
+      {/* ==================== CLOSING CTA ==================== */}
       <section className="bg-teal px-6 py-16 text-center md:px-12">
-        <h2 className="mx-auto max-w-[480px] text-[26px] font-bold text-white">
-          Ready to get your clearance moving?
-        </h2>
+        <div className="animate-page">
+          
+          <h2 className="mx-auto max-w-[480px] text-[26px] font-bold text-white">
+            Ready to get your clearance moving?
+          </h2>
 
-        <p className="mx-auto mt-2 max-w-[440px] text-[14.5px] text-white/80">
-          Log in with your registration number and start your request in
-          minutes.
-        </p>
+          <p className="mx-auto mt-2 max-w-[440px] text-[14.5px] text-white/80">
+            Log in with your registration number and start your request in
+            minutes.
+          </p>
 
-        <Link to="/login">
-          <Button
-            variant="secondary"
-            className="mt-6 !border-white !bg-white px-7 py-3 text-[15px] !text-teal hover:!bg-white/90"
-          >
-            Log in to start
-          </Button>
-        </Link>
+          <Link to="/login">
+            <Button
+              variant="secondary"
+              className="mt-6 !border-white !bg-white px-7 py-3 text-[15px] !text-teal transition-all duration-300 hover:-translate-y-1 hover:!bg-white/90 hover:shadow-lg"
+            >
+              Log in to start
+            </Button>
+          </Link>
+        </div>
       </section>
 
-      {/* Footer */}
+
+      {/* ==================== FOOTER ==================== */}
       <Footer />
     </div>
   );

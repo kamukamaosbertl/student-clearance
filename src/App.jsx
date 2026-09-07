@@ -3,10 +3,9 @@ import { ClearanceFormProvider } from "./context/ClearanceFormContext";
 
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/auth/Login";
+import StudentDashboard from "./pages/student/StudentDashboard";
 import PersonalInfoStep from "./pages/student/steps/PersonalInfoStep";
-import AcademicInfoStep from "./pages/student/steps/AcademicInfoStep";
-import ClearanceDetailsStep from "./pages/student/steps/ClearanceDetailsStep";
-import DocumentsStep from "./pages/student/steps/DocumentsStep";
+import OfficeDocumentsStep from "./pages/student/steps/OfficeDocumentsStep";
 import ReviewStep from "./pages/student/steps/ReviewStep";
 import ClearanceProgress from "./pages/student/ClearanceProgress";
 import CorrectionFeedback from "./pages/student/CorrectionFeedback";
@@ -16,21 +15,19 @@ export default function App() {
     <BrowserRouter>
       <ClearanceFormProvider>
         <Routes>
-          {/* "/" now shows the landing page instead of redirecting straight
-              to login — visitors get context before being asked to sign in */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
 
+          {/* NEW: the real home screen after login */}
+          <Route path="/dashboard" element={<StudentDashboard />} />
+
           <Route path="/clearance/personal" element={<PersonalInfoStep />} />
-          <Route path="/clearance/academic" element={<AcademicInfoStep />} />
-          <Route path="/clearance/details" element={<ClearanceDetailsStep />} />
-          <Route path="/clearance/documents" element={<DocumentsStep />} />
+          <Route path="/clearance/office/:officeKey" element={<OfficeDocumentsStep />} />
           <Route path="/clearance/review" element={<ReviewStep />} />
 
           <Route path="/clearance/progress" element={<ClearanceProgress />} />
           <Route path="/clearance/feedback" element={<CorrectionFeedback />} />
 
-          {/* unknown routes now land on the landing page, not login */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ClearanceFormProvider>

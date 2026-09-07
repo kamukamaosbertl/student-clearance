@@ -1,28 +1,50 @@
 import { Link, useLocation } from "react-router-dom";
 import { studentNavItems } from "../../data/navigation";
+import { useClearanceForm } from "../../context/ClearanceFormContext";
 
 export default function Sidebar() {
   const { pathname } = useLocation();
+  const { hasStarted } = useClearanceForm();
 
   return (
     <aside className="flex w-[250px] shrink-0 flex-col gap-5 border-r border-border bg-white px-4 py-5">
-      {/* Role tabs removed on purpose — a student's role is decided by
-          login, not something they should see or switch client-side.
-          Officer/Admin will be separate views reached by logging in
-          with those accounts, not a toggle here. */}
-
       <p className="px-0.5 text-[11px] font-medium uppercase tracking-wide text-navy-soft/70">
         Student screens
       </p>
 
       <nav className="flex flex-col gap-0.5">
         {studentNavItems.map((item) => {
+          // NEW: everything except Dashboard is locked until the student
+          // has actually reached the wizard at least once — set via
+          // startClearance() in PersonalInfoStep. Dashboard itself is
+          // always accessible, since it's the only way IN to starting.
+          const isLocked = item.key !== "dashboard" && !hasStarted;
+
           const isActive =
             item.key === "clearance-request"
               ? pathname.startsWith("/clearance") &&
                 !pathname.includes("progress") &&
                 !pathname.includes("feedback")
               : pathname === item.path;
+
+          if (isLocked) {
+            // Rendered as a non-clickable, greyed row with a lock icon —
+            // visible so the student knows the screen exists, but can't
+            // be clicked into before they've started clearance.
+            return (
+              <span
+                key={item.key}
+                title="Start your clearance request first"
+                className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2.5 text-[14px] text-navy-soft/40"
+              >
+                <svg viewBox="0 0 16 16" fill="none" className="size-3.5 shrink-0" aria-hidden="true">
+                  <rect x="3" y="7" width="10" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                {item.label}
+              </span>
+            );
+          }
 
           return (
             <Link

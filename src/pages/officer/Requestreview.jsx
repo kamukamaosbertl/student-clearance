@@ -15,7 +15,7 @@ const DECISION_LABELS = {
 
 export default function RequestReview() {
   const { id } = useParams();
-
+ 
   // Falls back to the first mock record if the id in the URL isn't
   // found — remove that fallback once this reads from a real API,
   // where a missing id should show a proper "not found" state.

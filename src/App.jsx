@@ -1,4 +1,3 @@
-```jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ClearanceFormProvider } from "./context/ClearanceFormContext";
 
@@ -14,8 +13,8 @@ import ClearanceProgress from "./pages/student/ClearanceProgress";
 import CorrectionFeedback from "./pages/student/CorrectionFeedback";
 import OfficerDashboard from "./pages/officer/Dashboard";
 import PendingRequests from "./pages/officer/PendingRequests";
-import RequestReview from "./pages/officer/Requestreview";
-import ProcessingHistory from "./pages/officer/processingHistory";
+import RequestReview from "./pages/officer/RequestReview";
+import ProcessingHistory from "./pages/officer/ProcessingHistory";
 import RequestReviewIndex from "./pages/officer/RequestReviewIndex";
 
 export default function App() {
@@ -31,7 +30,7 @@ export default function App() {
           <Route path="/officer/login" element={<OfficerLogin />} />
           <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Student dashboard after login */}
+          {/* NEW: the real home screen after login */}
           <Route path="/dashboard" element={<StudentDashboard />} />
 
           <Route path="/clearance/personal" element={<PersonalInfoStep />} />
@@ -52,4 +51,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-```

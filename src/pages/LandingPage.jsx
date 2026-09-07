@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
+import RoleMenu from "../components/ui/RoleMenu";
+import Brand from "../components/layout/Brand";
 
 // ── Small inline icon set — no icon library installed, so these are
 // hand-written minimal outline icons in currentColor, sized to inherit
@@ -74,23 +76,17 @@ export default function LandingPage() {
       {/* ── Nav ─────────────────────────────────────────────────────── */}
       <header className="border-b border-border bg-white px-6 py-4 md:px-12">
         <div className="mx-auto flex max-w-[1160px] items-center gap-8">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="size-9 shrink-0 rounded-full"
-              style={{ background: "conic-gradient(from 180deg, #1B6B45, #E8A93E, #1B6B45)" }}
-              aria-hidden="true"
-            />
-            <span className="text-[18px] font-bold text-teal">MUST Clearance</span>
-          </div>
+          <Brand />
 
           <nav className="ml-auto hidden items-center gap-7 text-[14px] font-semibold text-navy md:flex">
             <a href="#how-it-works" className="transition-colors hover:text-teal">How it works</a>
             <a href="#features" className="transition-colors hover:text-teal">Why it helps</a>
           </nav>
 
-          <Link to="/login">
-            <Button className="ml-2 md:ml-0">Log in</Button>
-          </Link>
+          {/* Was: <Link to="/login"><Button>Log in</Button></Link>
+              Now opens a role picker (Student / Officer / Admin) that
+              routes to the matching login page. */}
+          <RoleMenu className="ml-2 md:ml-0" />
         </div>
       </header>
 

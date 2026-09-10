@@ -1,5 +1,19 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import { useAuth } from "../../context/AuthContext";
+
+const AUTH_PATHS = ["/login", "/officer/login", "/admin/login"];
+
+// Sends a logged-out user back to the right portal's login page,
+// based on which section they were in — same "check the path
+// prefix" idea used in Sidebar.jsx.
+function getLoginPathForRole(pathname) {
+  if (pathname.startsWith("/officer")) return "/officer/login";
+  if (pathname.startsWith("/admin")) return "/admin/login";
+  return "/login";
+}
 
 // The gold utility bar + white nav header from the mockup.
 // This sits above the Sidebar on every page — added here in AppShell,
@@ -7,14 +21,22 @@ import Brand from "./Brand";
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Login is a page before authentication.
-  const isLoginPage = location.pathname === "/login";
+  // Any of the three login pages — not authenticated yet.
+  const isAuthPage = AUTH_PATHS.includes(location.pathname);
 
-  const handleLogout = () => {
-    // TODO: clear authentication/session data here
-    navigate("/login");
-  };
+  function confirmLogout() {
+    const loginPath = getLoginPathForRole(location.pathname);
+    logout();
+    setShowLogoutConfirm(false);
+    // replace: true so the just-left protected page doesn't sit in
+    // history right above the login page — RequireAuth is what
+    // actually blocks Back from showing protected content, this just
+    // keeps the history stack tidy.
+    navigate(loginPath, { replace: true });
+  }
 
   return (
     <header className="flex flex-col">
@@ -52,9 +74,9 @@ export default function Header() {
           </button>
 
           {/* Login / Logout */}
-          {isLoginPage ? (
+          {isAuthPage ? (
             <Link
-              to="/login"
+              to={location.pathname}
               className="rounded-full bg-gold px-[18px] py-[9px] text-[14px] font-bold text-[#3A2C00] transition-colors hover:bg-gold-dark"
             >
               Log in
@@ -62,7 +84,7 @@ export default function Header() {
           ) : (
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="rounded-full bg-gold px-[18px] py-[9px] text-[14px] font-bold text-[#3A2C00] transition-colors hover:bg-gold-dark"
             >
               🔒 Log out
@@ -70,6 +92,16 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Log out of MUST Clearance?"
+        message="You'll need to sign in again to continue."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </header>
   );
 }

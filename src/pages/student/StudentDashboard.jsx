@@ -36,9 +36,9 @@ export default function StudentDashboard() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Student"
-        title={`Welcome back, ${currentUser.fullName.split(" ")[0]}`}
-        description={`${currentUser.studentId} · ${currentUser.programme}`}
+        eyebrow="Student dashboard"
+        title="Clearance overview"
+        description="Track your graduation clearance and see what needs your attention."
       />
 
       {!hasSubmitted ? (

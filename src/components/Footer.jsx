@@ -49,19 +49,21 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-teal-dark text-white">
+    <footer className="bg-teal text-white">
       <div className="mx-auto max-w-[1160px] px-6 py-12 md:px-12">
         <div className="grid gap-10 md:grid-cols-4">
 
           {/* Brand */}
           <div className="md:pr-6">
-            <Link to="/" className="group flex items-center gap-3" aria-label="MUST Clearance home">
-              <img src={mustBadge} alt="MUST badge" className="size-11 object-contain" />
+            <Link to="/" className="group inline-flex items-center gap-3" aria-label="MUST Clearance home">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-white p-1.5">
+                <img src={mustBadge} alt="MUST badge" className="size-full object-contain" />
+              </div>
               <div>
                 <p className="text-[17px] font-bold text-white transition-colors duration-200 group-hover:text-gold">
                   MUST Clearance
                 </p>
-                <p className="text-[11px] leading-4 text-white/60">
+                <p className="text-[11px] leading-4 text-white/70">
                   Mbarara University of Science and Technology
                 </p>
               </div>
@@ -72,7 +74,7 @@ export default function Footer() {
           <div>
             <h3 className="mb-4 text-[14px] font-semibold text-gold">About MUST Clearance</h3>
             <p className="max-w-[260px] text-[13px] leading-relaxed text-white/75">
-              The official graduation clearance platform for MUST  submit once, track
+              The official graduation clearance platform for MUST — submit once, track
               every office's decision, and finish your clearance without the queues.
             </p>
           </div>
@@ -121,18 +123,14 @@ export default function Footer() {
             © {currentYear} MUST Clearance. Mbarara University of Science and Technology.
           </p>
 
-          <div className="flex items-center gap-5">
-
-
-            <button
-              type="button"
-              onClick={scrollToTop}
-              aria-label="Back to top"
-              className="ml-1 flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-gold hover:text-[#3A2C00]"
-            >
-              <IconArrowUp className="size-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={scrollToTop}
+            aria-label="Back to top"
+            className="flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-gold hover:text-[#3A2C00]"
+          >
+            <IconArrowUp className="size-4" />
+          </button>
         </div>
       </div>
     </footer>

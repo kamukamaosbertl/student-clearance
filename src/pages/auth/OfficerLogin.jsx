@@ -6,9 +6,11 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
 import { login } from "../../services/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 export default function OfficerLogin() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [serverError, setServerError] = useState("");
@@ -24,7 +26,8 @@ export default function OfficerLogin() {
 
     setIsSubmitting(true);
     try {
-      await login({ login: email, password, role: "officer" });
+      const result = await login({ login: email, password, role: "officer" });
+      setUser(result.user);
       navigate("/officer/dashboard");
     } catch (error) {
       setServerError(error.message);

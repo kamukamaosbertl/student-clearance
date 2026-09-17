@@ -8,6 +8,11 @@ Start both the Vite frontend and authentication API with:
 npm run dev:all
 ```
 
+Before starting the API, create a PostgreSQL database named
+`student_clearance`, copy `.env.example` to `.env`, and set your PostgreSQL
+password in `DATABASE_URL`. The server creates its `users` and `sessions`
+tables automatically on startup.
+
 Then open `http://localhost:5173`. The API runs on port `5000` and is
 proxied by Vite. The demo student login is `2023/BSE/058/PS` with password
 `student123`.

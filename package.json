@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "node scripts/dev.js",
-    "server": "node server/index.js",
+    "server": "node --env-file-if-exists=.env server/index.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
+  
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "express": "^5.2.1",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",

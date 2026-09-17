@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ClearanceFormProvider } from "./context/ClearanceFormContext";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/auth/Login";
@@ -20,8 +22,9 @@ import RequestReviewIndex from "./pages/officer/RequestReviewIndex";
 export default function App() {
   return (
     <BrowserRouter>
-      <ClearanceFormProvider>
-        <Routes>
+      <AuthProvider>
+        <ClearanceFormProvider>
+          <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
 
@@ -31,23 +34,24 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* NEW: the real home screen after login */}
-          <Route path="/dashboard" element={<StudentDashboard />} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
 
-          <Route path="/clearance/personal" element={<PersonalInfoStep />} />
-          <Route path="/clearance/office/:officeKey" element={<OfficeDocumentsStep />} />
-          <Route path="/clearance/review" element={<ReviewStep />} />
-          <Route path="/officer/dashboard" element={<OfficerDashboard />} />
-          <Route path="/clearance/progress" element={<ClearanceProgress />} />
-          <Route path="/clearance/feedback" element={<CorrectionFeedback />} />
-          <Route path="/officer/queue" element={<PendingRequests />} />
-          <Route path="/officer/request/:id" element={<RequestReview />} />
-          <Route path="/officer/request" element={<RequestReviewIndex />} />
-          <Route path="/officer/history" element={<ProcessingHistory />} />
+          <Route path="/clearance/personal" element={<ProtectedRoute allowedRoles={["student"]}><PersonalInfoStep /></ProtectedRoute>} />
+          <Route path="/clearance/office/:officeKey" element={<ProtectedRoute allowedRoles={["student"]}><OfficeDocumentsStep /></ProtectedRoute>} />
+          <Route path="/clearance/review" element={<ProtectedRoute allowedRoles={["student"]}><ReviewStep /></ProtectedRoute>} />
+          <Route path="/clearance/progress" element={<ProtectedRoute allowedRoles={["student"]}><ClearanceProgress /></ProtectedRoute>} />
+          <Route path="/clearance/feedback" element={<ProtectedRoute allowedRoles={["student"]}><CorrectionFeedback /></ProtectedRoute>} />
+          <Route path="/officer/dashboard" element={<ProtectedRoute allowedRoles={["officer"]}><OfficerDashboard /></ProtectedRoute>} />
+          <Route path="/officer/queue" element={<ProtectedRoute allowedRoles={["officer"]}><PendingRequests /></ProtectedRoute>} />
+          <Route path="/officer/request/:id" element={<ProtectedRoute allowedRoles={["officer"]}><RequestReview /></ProtectedRoute>} />
+          <Route path="/officer/request" element={<ProtectedRoute allowedRoles={["officer"]}><RequestReviewIndex /></ProtectedRoute>} />
+          <Route path="/officer/history" element={<ProtectedRoute allowedRoles={["officer"]}><ProcessingHistory /></ProtectedRoute>} />
 
           {/* unknown routes now land on the landing page, not login */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </ClearanceFormProvider>
+          </Routes>
+        </ClearanceFormProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const processes = [
-  spawn(npmCommand, ["run", "server"], { stdio: "inherit" }),
-  spawn(npmCommand, ["run", "dev"], { stdio: "inherit" }),
+  spawn(npmCommand, ["run", "server"], { stdio: "inherit", shell: process.platform === "win32" }),
+  spawn(npmCommand, ["run", "dev"], { stdio: "inherit", shell: process.platform === "win32" }),
 ];
 
 function stopProcesses() {

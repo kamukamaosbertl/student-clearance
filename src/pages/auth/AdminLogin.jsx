@@ -6,12 +6,14 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
 import { login } from "../../services/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 // Placeholder page so the role menu doesn't dead-end. Per the build
 // order, Admin screens come last — flesh this out (account
 // management, monitoring, reports) when you get there.
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [serverError, setServerError] = useState("");
@@ -27,7 +29,8 @@ export default function AdminLogin() {
 
     setIsSubmitting(true);
     try {
-      await login({ login: email, password, role: "admin" });
+      const result = await login({ login: email, password, role: "admin" });
+      setUser(result.user);
       navigate("/admin/dashboard");
     } catch (error) {
       setServerError(error.message);

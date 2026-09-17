@@ -8,9 +8,11 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateRegNo, validatePassword } from "../../utils/validators";
 import { login } from "../../services/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const [regNo, setRegNo] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +41,8 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
-      await login({ login: regNo, password, role: "student" });
+      const result = await login({ login: regNo, password, role: "student" });
+      setUser(result.user);
       navigate("/dashboard");
     } catch (error) {
       setServerError(error.message);

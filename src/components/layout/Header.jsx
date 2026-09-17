@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
-import { logout } from "../../services/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 // The gold utility bar + white nav header from the mockup.
 // This sits above the Sidebar on every page — added here in AppShell,
@@ -8,6 +8,7 @@ import { logout } from "../../services/authApi";
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Login is a page before authentication.
   const isLoginPage = location.pathname === "/login";

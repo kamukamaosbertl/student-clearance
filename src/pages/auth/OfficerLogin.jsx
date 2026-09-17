@@ -5,22 +5,32 @@ import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
+import { login } from "../../services/authApi";
 
 export default function OfficerLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
     const nextErrors = { email: validateEmail(email), password: validatePassword(password) };
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
 
-    // TODO: call the real auth endpoint here; on a wrong-credentials
-    // response, do setErrors(prev => ({ ...prev, password: "Incorrect email or password." }))
-    navigate("/officer/dashboard");
+    setIsSubmitting(true);
+    try {
+      await login({ login: email, password, role: "officer" });
+      navigate("/officer/dashboard");
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -58,9 +68,10 @@ export default function OfficerLogin() {
             error={errors.password}
           />
 
-          <Button type="submit" className="w-full">
-            Log in
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Log in"}
           </Button>
+          {serverError && <p className="text-[13px] text-red-500">{serverError}</p>}
         </form>
       </Card>
     </AuthShell>

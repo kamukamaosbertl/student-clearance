@@ -7,20 +7,24 @@ import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateRegNo, validatePassword } from "../../utils/validators";
+import { login } from "../../services/authApi";
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [regNo, setRegNo] = useState("");
   const [password, setPassword] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errors, setErrors] = useState({
     regNo: "",
     password: "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
 
     const nextErrors = {
       regNo: validateRegNo(regNo),
@@ -33,8 +37,15 @@ export default function Login() {
       return;
     }
 
-    // TODO: Replace this with the real authentication request.
-    navigate("/dashboard");
+    setIsSubmitting(true);
+    try {
+      await login({ login: regNo, password, role: "student" });
+      navigate("/dashboard");
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,9 +128,11 @@ export default function Login() {
           <Button
             type="submit"
             className="mt-1 w-full py-3"
+            disabled={isSubmitting}
           >
-            Log in
+            {isSubmitting ? "Signing in..." : "Log in"}
           </Button>
+          {serverError && <p className="text-[13px] text-red-500">{serverError}</p>}
         </form>
 
         {/* Help message */}

@@ -1,5 +1,17 @@
 # React + Vite
 
+## Run the app
+
+Start both the Vite frontend and authentication API with:
+
+```bash
+npm run dev:all
+```
+
+Then open `http://localhost:5173`. The API runs on port `5000` and is
+proxied by Vite. The demo student login is `2023/BSE/058/PS` with password
+`student123`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

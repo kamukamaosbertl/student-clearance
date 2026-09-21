@@ -7,10 +7,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+
+# Build files
+dist/
+dist-ssr/
 *.local
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Uploaded files
+uploads/
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +33,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Student data
+# Uncomment this if the CSV contains real student passwords
+# backend/must_clearance_students.csv

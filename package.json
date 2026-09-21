@@ -22,5 +22,18 @@
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
     "vite": "^8.2.2"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.",
+  "main": "tailwind.config.snippet.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kamukamaosbertl/student-clearance.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kamukamaosbertl/student-clearance/issues"
+  },
+  "homepage": "https://github.com/kamukamaosbertl/student-clearance#readme"
 }

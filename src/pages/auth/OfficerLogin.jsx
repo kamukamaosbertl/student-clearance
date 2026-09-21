@@ -5,9 +5,11 @@ import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
+import { useAuth } from "../../context/AuthContext";
 
 export default function OfficerLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
@@ -20,6 +22,7 @@ export default function OfficerLogin() {
 
     // TODO: call the real auth endpoint here; on a wrong-credentials
     // response, do setErrors(prev => ({ ...prev, password: "Incorrect email or password." }))
+    login("officer");
     navigate("/officer/dashboard");
   };
 

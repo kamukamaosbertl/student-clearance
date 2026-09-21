@@ -7,9 +7,11 @@ import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { validateRegNo, validatePassword } from "../../utils/validators";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [regNo, setRegNo] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +36,7 @@ export default function Login() {
     }
 
     // TODO: Replace this with the real authentication request.
+    login("student");
     navigate("/dashboard");
   };
 

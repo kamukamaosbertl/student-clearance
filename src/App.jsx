@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ClearanceFormProvider } from "./context/ClearanceFormContext";
+import { AuthProvider } from "./context/AuthContext";
+import RequireAuth from "./components/Requireauth";
 
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/auth/Login";
@@ -13,41 +15,121 @@ import ClearanceProgress from "./pages/student/ClearanceProgress";
 import CorrectionFeedback from "./pages/student/CorrectionFeedback";
 import OfficerDashboard from "./pages/officer/Dashboard";
 import PendingRequests from "./pages/officer/PendingRequests";
-import RequestReview from "./pages/officer/RequestReview";
+import RequestReview from "./pages/officer/Requestreview";
 import ProcessingHistory from "./pages/officer/ProcessingHistory";
 import RequestReviewIndex from "./pages/officer/RequestReviewIndex";
 
 export default function App() {
   return (
     <BrowserRouter>
-      <ClearanceFormProvider>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
+      <AuthProvider>
+        <ClearanceFormProvider>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
 
-          {/* Officer / Admin portals — reached via the role menu on the
-              landing page's "Log in" button */}
-          <Route path="/officer/login" element={<OfficerLogin />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Officer / Admin portals — reached via the role menu on the
+                landing page's "Log in" button */}
+            <Route path="/officer/login" element={<OfficerLogin />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* NEW: the real home screen after login */}
-          <Route path="/dashboard" element={<StudentDashboard />} />
+            {/* Student — protected */}
+            <Route
+              path="/dashboard"
+              element={
+                <RequireAuth role="student">
+                  <StudentDashboard />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/clearance/personal"
+              element={
+                <RequireAuth role="student">
+                  <PersonalInfoStep />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/clearance/office/:officeKey"
+              element={
+                <RequireAuth role="student">
+                  <OfficeDocumentsStep />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/clearance/review"
+              element={
+                <RequireAuth role="student">
+                  <ReviewStep />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/clearance/progress"
+              element={
+                <RequireAuth role="student">
+                  <ClearanceProgress />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/clearance/feedback"
+              element={
+                <RequireAuth role="student">
+                  <CorrectionFeedback />
+                </RequireAuth>
+              }
+            />
 
-          <Route path="/clearance/personal" element={<PersonalInfoStep />} />
-          <Route path="/clearance/office/:officeKey" element={<OfficeDocumentsStep />} />
-          <Route path="/clearance/review" element={<ReviewStep />} />
-          <Route path="/officer/dashboard" element={<OfficerDashboard />} />
-          <Route path="/clearance/progress" element={<ClearanceProgress />} />
-          <Route path="/clearance/feedback" element={<CorrectionFeedback />} />
-          <Route path="/officer/queue" element={<PendingRequests />} />
-          <Route path="/officer/request/:id" element={<RequestReview />} />
-          <Route path="/officer/request" element={<RequestReviewIndex />} />
-          <Route path="/officer/history" element={<ProcessingHistory />} />
+            {/* Officer — protected */}
+            <Route
+              path="/officer/dashboard"
+              element={
+                <RequireAuth role="officer">
+                  <OfficerDashboard />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/officer/queue"
+              element={
+                <RequireAuth role="officer">
+                  <PendingRequests />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/officer/request/:id"
+              element={
+                <RequireAuth role="officer">
+                  <RequestReview />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/officer/request"
+              element={
+                <RequireAuth role="officer">
+                  <RequestReviewIndex />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/officer/history"
+              element={
+                <RequireAuth role="officer">
+                  <ProcessingHistory />
+                </RequireAuth>
+              }
+            />
 
-          {/* unknown routes now land on the landing page, not login */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </ClearanceFormProvider>
+            {/* unknown routes now land on the landing page, not login */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ClearanceFormProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

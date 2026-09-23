@@ -1,0 +1,8 @@
+fullName,email,password,role,department
+Finance Officer,finance.officer@must.ac.ug,Finance@2026,officer,Finance
+Library Officer,library.officer@must.ac.ug,Library@2026,officer,Library
+Department Officer,department.officer@must.ac.ug,Department@2026,officer,Software Engineering
+Student Affairs Officer,studentaffairs.officer@must.ac.ug,StudentAffairs@2026,officer,Student Affairs
+Academic Registrar,registrar@must.ac.ug,Registrar@2026,officer,Academic Registrar
+System Administrator,admin@must.ac.ug,Admin@2026,admin,
+Deputy Administrator,admin2@must.ac.ug,Admin2@2026,admin,

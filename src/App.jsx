@@ -18,6 +18,7 @@ import PendingRequests from "./pages/officer/PendingRequests";
 import RequestReview from "./pages/officer/Requestreview";
 import ProcessingHistory from "./pages/officer/ProcessingHistory";
 import RequestReviewIndex from "./pages/officer/RequestReviewIndex";
+import AdminDashboard from "./pages/admin/Dashboard";
 
 export default function App() {
   return (
@@ -121,6 +122,16 @@ export default function App() {
               element={
                 <RequireAuth role="officer">
                   <ProcessingHistory />
+                </RequireAuth>
+              }
+            />
+
+            {/* Admin — protected */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <RequireAuth role="admin">
+                  <AdminDashboard />
                 </RequireAuth>
               }
             />

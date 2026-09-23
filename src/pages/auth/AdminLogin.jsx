@@ -7,27 +7,47 @@ import Button from "../../components/ui/Button";
 import { validateEmail, validatePassword } from "../../utils/validators";
 import { useAuth } from "../../context/AuthContext";
 
-// Placeholder page so the role menu doesn't dead-end. Per the build
-// order, Admin screens come last — flesh this out (account
-// management, monitoring, reports) when you get there.
+// Per the build order, Admin screens come last — flesh this out
+// (account management, monitoring, reports) when you get there.
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { staffLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
+
     const nextErrors = { email: validateEmail(email), password: validatePassword(password) };
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
 
-    // TODO: call the real auth endpoint here; on a wrong-credentials
-    // response, do setErrors(prev => ({ ...prev, password: "Incorrect email or password." }))
-    // TODO: point this at the real admin dashboard route once it exists
-    login("admin");
-    navigate("/admin/dashboard");
+    setIsSubmitting(true);
+
+    try {
+      const user = await staffLogin(email, password);
+
+      // Backend allows any non-student role through staff-login; make sure
+      // this specific portal only accepts admins, not officers
+      if (user.role !== "admin") {
+        setServerError("This login is for administrators only.");
+        return;
+      }
+
+      // TODO: point this at the real admin dashboard route once it exists
+      navigate("/admin/dashboard");
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        "Unable to log in. Please check your connection and try again.";
+      setServerError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -65,8 +85,14 @@ export default function AdminLogin() {
             error={errors.password}
           />
 
-          <Button type="submit" className="w-full">
-            Log in
+          {serverError && (
+            <p className="text-[13.5px] font-medium text-red-600" role="alert">
+              {serverError}
+            </p>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Log in"}
           </Button>
         </form>
       </Card>

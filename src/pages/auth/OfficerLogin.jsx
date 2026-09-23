@@ -9,21 +9,42 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function OfficerLogin() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { staffLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
+
     const nextErrors = { email: validateEmail(email), password: validatePassword(password) };
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
 
-    // TODO: call the real auth endpoint here; on a wrong-credentials
-    // response, do setErrors(prev => ({ ...prev, password: "Incorrect email or password." }))
-    login("officer");
-    navigate("/officer/dashboard");
+    setIsSubmitting(true);
+
+    try {
+      const user = await staffLogin(email, password);
+
+      // Backend allows any non-student role through staff-login; make sure
+      // this specific portal only accepts officers, not admins
+      if (user.role !== "officer") {
+        setServerError("This login is for officers only.");
+        return;
+      }
+
+      navigate("/officer/dashboard");
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        "Unable to log in. Please check your connection and try again.";
+      setServerError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -61,8 +82,14 @@ export default function OfficerLogin() {
             error={errors.password}
           />
 
-          <Button type="submit" className="w-full">
-            Log in
+          {serverError && (
+            <p className="text-[13.5px] font-medium text-red-600" role="alert">
+              {serverError}
+            </p>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Log in"}
           </Button>
         </form>
       </Card>

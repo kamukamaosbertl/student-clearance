@@ -15,14 +15,17 @@ export default function Login() {
 
   const [regNo, setRegNo] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const [errors, setErrors] = useState({
     regNo: "",
     password: "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
 
     const nextErrors = {
       regNo: validateRegNo(regNo),
@@ -35,9 +38,20 @@ export default function Login() {
       return;
     }
 
-    // TODO: Replace this with the real authentication request.
-    login("student");
-    navigate("/dashboard");
+    setIsSubmitting(true);
+
+    try {
+      await login(regNo, password);
+      navigate("/dashboard");
+    } catch (err) {
+      // Backend sends { message: "..." } on 400/401/403/500
+      const message =
+        err.response?.data?.message ||
+        "Unable to log in. Please check your connection and try again.";
+      setServerError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -116,12 +130,23 @@ export default function Login() {
             error={errors.password}
           />
 
+          {/* Server-side error (wrong credentials, inactive account, network issue) */}
+          {serverError && (
+            <p
+              className="text-[13.5px] font-medium text-red-600"
+              role="alert"
+            >
+              {serverError}
+            </p>
+          )}
+
           {/* Login button */}
           <Button
             type="submit"
             className="mt-1 w-full py-3"
+            disabled={isSubmitting}
           >
-            Log in
+            {isSubmitting ? "Logging in..." : "Log in"}
           </Button>
         </form>
 

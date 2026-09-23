@@ -6,8 +6,15 @@ import { useAuth } from "../context/AuthContext";
 // logged out and hit the browser's Back button — they're bounced to
 // the landing page instead of seeing the protected page's content.
 export default function RequireAuth({ role, children }) {
-  const { role: currentRole, isAuthenticated } = useAuth();
+  const { role: currentRole, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+
+  // Session is still being restored from localStorage — wait rather
+  // than redirecting, or a refreshed page will briefly kick out a
+  // logged-in user before their session has a chance to load.
+  if (isLoading) {
+    return null; // or a spinner/loading component if you have one
+  }
 
   if (!isAuthenticated || currentRole !== role) {
     return <Navigate to="/" replace state={{ from: location }} />;

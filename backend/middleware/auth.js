@@ -1,23 +1,48 @@
 import jwt from "jsonwebtoken";
 import { User, Office } from "../models/index.js";
+import { validateSession } from "../services/sessionService.js";
 
-// Verifies the "Authorization: Bearer <token>" header, loads the user from
-// the database and attaches it to req.user. The user is re-read on every
-// request so that a deactivated account or a changed role takes effect
-// immediately instead of when the token expires.
+const SESSION_MESSAGES = {
+  idle_timeout: "You were logged out after a period of inactivity. Please log in again.",
+  expired: "Your session has expired. Please log in again.",
+  logout: "You have been logged out. Please log in again.",
+  logout_all: "You were logged out from all devices. Please log in again.",
+  password_changed: "Your password was changed. Please log in again.",
+  admin: "Your session was ended by an administrator. Please log in again.",
+  account_disabled: "Your account has been deactivated.",
+};
+
+// Verifies the "Authorization: Bearer <token>" header, then checks the
+// SERVER-SIDE session it points to and loads the user. Both are re-read on
+// every request, so logout, an idle timeout, a deactivated account or a
+// changed role take effect immediately on every server.
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization || "";
   const [scheme, token] = header.split(" ");
 
   if (scheme !== "Bearer" || !token) {
-    return res.status(401).json({ message: "Please log in to continue." });
+    return res.status(401).json({ message: "Please log in to continue.", code: "NO_SESSION" });
   }
 
   let payload;
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch {
-    return res.status(401).json({ message: "Your session has expired. Please log in again." });
+    return res.status(401).json({ message: SESSION_MESSAGES.expired, code: "SESSION_EXPIRED" });
+  }
+
+  // Tokens issued before sessions existed have no session id
+  if (!payload.sid) {
+    return res.status(401).json({ message: SESSION_MESSAGES.expired, code: "SESSION_EXPIRED" });
+  }
+
+  const { session, reason } = await validateSession(payload.sid, payload.userId);
+  if (!session) {
+    return res.status(401).json({
+      message: SESSION_MESSAGES[reason] || SESSION_MESSAGES.expired,
+      code: "SESSION_ENDED",
+      reason,
+    });
   }
 
   const user = await User.findByPk(payload.userId, {
@@ -26,10 +51,11 @@ export async function authenticate(req, res, next) {
   });
 
   if (!user || !user.isActive) {
-    return res.status(401).json({ message: "Your account is not active. Please log in again." });
+    return res.status(401).json({ message: SESSION_MESSAGES.account_disabled, code: "SESSION_ENDED" });
   }
 
   req.user = user;
+  req.session = session;
   next();
 }
 

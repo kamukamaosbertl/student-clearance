@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
+    "start:cluster": "node cluster.js",
+    "worker": "node worker.js",
+    "lb": "node loadbalancer/lb.js",
+    "stack": "node scripts/stack.js",
     "db:migrate": "sequelize-cli db:migrate",
     "db:seed": "sequelize-cli db:seed:all",
     "import:staff": "node importStaff.js",
     "import:students": "node importStudents.js",
     "setup": "npm run db:migrate && npm run db:seed && npm run import:staff && npm run import:students",
-    "test:e2e": "node tests/workflow.e2e.mjs"
+    "test:e2e": "node tests/workflow.e2e.mjs",
+    "test:scaling": "node tests/scaling.test.mjs"
   },
   "keywords": [],
   "author": "",

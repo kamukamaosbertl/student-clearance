@@ -25,6 +25,19 @@ npm run dev
 
 The new migrations link existing officers to their office automatically (by matching `department` to the office name; academic departments such as "Software Engineering" go to the Department office).
 
+### Ways to run the server
+
+| Command | What runs |
+|---|---|
+| `npm run dev` | One server on port 5000 (restarts when you edit code) |
+| `npm run start:cluster` | One process per CPU core, all on port 5000 (`cluster`/fork) |
+| `npm run stack` | 3 API servers (ports 5001–5003) + background worker + load balancer on port 5000 |
+| `npm run worker` | Background worker only (emails, reminders, clean-up) — needed with `dev` / `start:cluster` |
+
+The React app always talks to `http://localhost:5000/api`, so it works the same with all of these. See `../CLIENT_SERVER_CONCEPTS.md` for how each part maps to the course.
+
+Emails are written to `backend/logs/outbox.log` until you set the `SMTP_*` values in `.env`.
+
 Uploaded documents are saved in `backend/uploads/` (set `UPLOAD_DIR` to change it). That folder and `.env` are in `.gitignore`.
 
 ## How the workflow works
@@ -51,7 +64,12 @@ All routes are under `/api`. Every route except login needs `Authorization: Bear
 |---|---|---|---|
 | POST | `/auth/login` | — | Student login `{ studentId, password }` |
 | POST | `/auth/staff-login` | — | Officer/admin login `{ email, password }` |
-| GET | `/auth/me` | any | Current user (incl. officer's office) |
+| GET | `/auth/me` | any | Current user (incl. officer's office) and session |
+| POST | `/auth/logout` | any | End this session on the server |
+| POST | `/auth/logout-all` | any | End every session of this user |
+| GET | `/auth/sessions` | any | This user's active sessions |
+| GET | `/health` | — | Health check for the load balancer (which server, database, event bus) |
+| GET | `/events` | any | Live updates stream (Server-Sent Events) |
 | POST | `/auth/change-password` | any | `{ currentPassword, newPassword }` |
 | GET | `/offices` | any | Offices in workflow order |
 | GET | `/clearance/me` | student | Current request with stages, documents and history |
@@ -73,16 +91,19 @@ All routes are under `/api`. Every route except login needs `Authorization: Bear
 | POST | `/admin/users/:id/reset-password` | admin | `{ password }` |
 | GET | `/admin/offices`, PATCH `/admin/offices/:id` | admin | Office configuration (`isActive`, `isRequired`) |
 | GET | `/admin/audit-logs?action=` | admin | Audit trail |
+| GET | `/admin/sessions`, DELETE `/admin/sessions/:id` | admin | Active sessions / end one |
+| POST | `/admin/users/:id/logout-all` | admin | End every session of a user |
+| GET | `/admin/system` | admin | Which server answered, pools, job queue, live connections |
 | GET | `/admin/reports/applications.csv` | admin | CSV report of all requests |
 
 Errors always come back as `{ message }` (plus `details` for validation errors).
 
 ## Security measures (§16)
 
-- JWT authentication. The user is re-loaded on every request, so a deactivated account loses access immediately.
+- Server-side sessions: the token only points to a session row, so logout, idle timeout (30 min), "log out everywhere", password changes and admin actions end a session immediately on every server.
 - Role-based access control on every route. Officers can only open and decide stages of their own office.
 - Uploads: PDF/JPG/PNG only, 5 MB each. The file content is checked against its type (magic bytes). Files get random names and are served only through the permission-checked route. Files from failed requests are deleted.
-- Login rate limit (10 per 15 minutes) and a general API rate limit.
+- Login rate limit (10 per 15 minutes per IP) stored in the database, so it holds across all servers; plus a general API rate limit.
 - Server-side validation of every field. Generic error messages for server errors.
 - Audit log of logins, failed logins, submissions, decisions, document views, user and office changes, and report exports.
 
@@ -92,4 +113,10 @@ Errors always come back as `{ message }` (plus `details` for validation errors).
 
 ```bash
 npm run test:e2e
+```
+
+`tests/scaling.test.mjs` checks load balancing, shared sessions and rate limits, live updates across servers, the message queue, load and failover. Start `npm run stack` first, then:
+
+```bash
+npm run test:scaling
 ```

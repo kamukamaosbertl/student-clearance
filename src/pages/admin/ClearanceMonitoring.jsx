@@ -7,6 +7,7 @@ import StatusBadge from "../../components/ui/Statusbadge";
 import DocumentList from "../../components/clearance/DocumentList";
 import StageHistory from "../../components/clearance/StageHistory";
 import api, { apiErrorMessage } from "../../api/client";
+import { useLiveEvent } from "../../context/LiveEventsContext";
 import { APPLICATION_LABELS, STAGE_LABELS, formatDate } from "../../utils/status";
 
 const STATUS_FILTERS = [
@@ -82,6 +83,8 @@ export default function ClearanceMonitoring() {
       setError(apiErrorMessage(err));
     }
   }, [status, query]);
+
+  useLiveEvent("clearance.changed", load);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);

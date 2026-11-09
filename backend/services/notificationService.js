@@ -1,9 +1,28 @@
 import { Op } from "sequelize";
 import { Notification, User } from "../models/index.js";
+import { publish } from "./eventBus.js";
+import { enqueue } from "./jobQueue.js";
+
+// Each notification is delivered three ways:
+//  1. saved in the notifications table (the in-app list)
+//  2. pushed live to the user's open browser tabs (event bus + SSE)
+//  3. emailed — as a job on the message queue, so the request doesn't wait
+//     for the mail server; the worker process sends it
+// All three are part of the caller's transaction: if it rolls back, nothing
+// is shown, pushed or emailed.
+async function deliver(userIds, { type, title, message }, transaction) {
+  if (userIds.length === 0) return;
+  await publish("notification", { audience: { userIds }, type, title }, transaction);
+  for (const userId of userIds) {
+    await enqueue("email.send", { userId, subject: title, text: message }, { transaction });
+  }
+}
 
 // Creates one notification for one user
 export async function notifyUser(userId, { type, title, message, link = null }, transaction) {
-  return Notification.create({ userId, type, title, message, link }, { transaction });
+  const notification = await Notification.create({ userId, type, title, message, link }, { transaction });
+  await deliver([userId], { type, title, message }, transaction);
+  return notification;
 }
 
 // Notifies every active officer of an office (e.g. "a new request is in your queue").
@@ -26,10 +45,12 @@ export async function notifyOffice(officeId, { type, title, message, link = null
 
   if (officers.length === 0) return [];
 
-  return Notification.bulkCreate(
+  const created = await Notification.bulkCreate(
     officers.map((o) => ({ userId: o.id, type, title, message, link })),
     { transaction }
   );
+  await deliver(officers.map((o) => o.id), { type, title, message }, transaction);
+  return created;
 }
 
 export async function listForUser(userId, { unreadOnly = false, limit = 50 } = {}) {

@@ -42,5 +42,7 @@ export const adminNavItems = [
   { key: "monitoring", label: "Clearance monitoring", path: "/admin/monitoring" },
   { key: "reports", label: "Reports", path: "/admin/reports" },
   { key: "offices", label: "Offices & workflow", path: "/admin/offices" },
+  { key: "sessions", label: "Active sessions", path: "/admin/sessions" },
+  { key: "system", label: "System status", path: "/admin/system" },
   { key: "audit-logs", label: "System activity / audit logs", path: "/admin/audit" },
 ];

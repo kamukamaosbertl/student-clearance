@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -6,6 +6,7 @@ import Card from "../../components/ui/Card";
 import StatusBadge from "../../components/ui/Statusbadge";
 import api, { apiErrorMessage } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useLiveEvent } from "../../context/LiveEventsContext";
 import { STAGE_LABELS } from "../../utils/status";
 
 function getTimeOfDayGreeting() {
@@ -59,12 +60,16 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .get("/officer/dashboard")
       .then((res) => setData(res.data))
       .catch((err) => setError(apiErrorMessage(err)));
   }, []);
+
+  useEffect(load, [load]);
+  // New requests appear without refreshing the page
+  useLiveEvent("clearance.changed", load);
 
   const officeName = data?.office?.name || user?.office?.name || "";
   const stats = data

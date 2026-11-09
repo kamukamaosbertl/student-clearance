@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 import { useAuth } from "./AuthContext";
+import { useLiveEvent } from "./LiveEventsContext";
 
 const ClearanceFormContext = createContext(null);
 
@@ -53,6 +54,13 @@ export function ClearanceFormProvider({ children }) {
       setHasLoaded(false);
     }
   }, [isStudent, user?.id, refresh]);
+
+  // The server pushes "clearance.changed" when an office decides a stage —
+  // the progress page updates by itself, no reload needed
+  const refreshIfStudent = useCallback(() => {
+    if (isStudent) refresh();
+  }, [isStudent, refresh]);
+  useLiveEvent("clearance.changed", refreshIfStudent);
 
   const updateSection = useCallback((section, patch) => {
     setFormData((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }));

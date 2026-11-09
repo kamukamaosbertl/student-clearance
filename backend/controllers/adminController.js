@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { Op, fn, col } from "sequelize";
 import {
   User,
@@ -6,7 +5,17 @@ import {
   ClearanceApplication,
   ClearanceStage,
   AuditLog,
+  Session,
+  Job,
 } from "../models/index.js";
+import { hashPassword, passwordPoolStats } from "../services/passwordPool.js";
+import { revokeAllForUser, revokeSession, activeSessionWhere, serializeSession } from "../services/sessionService.js";
+import { queueStats } from "../services/jobQueue.js";
+import { realtimeStats } from "../services/realtime.js";
+import { eventBusStatus } from "../services/eventBus.js";
+import { invalidateCache } from "../utils/cache.js";
+import { poolStats } from "../config/database.js";
+import { INSTANCE_ID, STARTED_AT } from "../utils/instance.js";
 import { STAGE_STATUS, APPLICATION_STATUS, ACTIONABLE_STATUSES } from "../utils/constants.js";
 import { badRequest, conflict, notFound } from "../utils/httpError.js";
 import { isEmail, isRegNo, clean, validateNewPassword, pagination } from "../utils/validators.js";
@@ -249,7 +258,7 @@ export async function createUser(req, res) {
   try {
     const user = await User.create({
       ...values,
-      passwordHash: await bcrypt.hash(req.body.password, 10),
+      passwordHash: await hashPassword(req.body.password),
       isActive: values.isActive ?? true,
     });
     await logAudit({ req, action: "user.created", entityType: "user", entityId: user.id, details: { role: user.role } });
@@ -280,6 +289,9 @@ export async function updateUser(req, res) {
     throw error;
   }
 
+  // A deactivated account loses access immediately on every server
+  if (values.isActive === false) await revokeAllForUser(user.id, "account_disabled");
+
   await logAudit({ req, action: "user.updated", entityType: "user", entityId: user.id, details: { fields: Object.keys(values) } });
   const updated = await User.findByPk(user.id, { include: [{ model: Office, as: "office" }] });
   res.json({ user: serializeUser(updated) });
@@ -293,7 +305,8 @@ export async function resetPassword(req, res) {
   const passwordError = validateNewPassword(req.body.password);
   if (passwordError) throw badRequest(passwordError);
 
-  await user.update({ passwordHash: await bcrypt.hash(req.body.password, 10) });
+  await user.update({ passwordHash: await hashPassword(req.body.password) });
+  await revokeAllForUser(user.id, "password_changed");
   await logAudit({ req, action: "user.password_reset", entityType: "user", entityId: user.id });
   res.json({ message: "Password reset." });
 }
@@ -328,6 +341,7 @@ export async function updateOffice(req, res) {
   }
 
   await office.update(values);
+  invalidateCache("offices"); // every server drops its cached office list
   await logAudit({ req, action: "office.updated", entityType: "office", entityId: office.id, details: values });
   res.json({ office: serializeOffice(office) });
 }
@@ -363,4 +377,73 @@ export async function listAuditLogs(req, res) {
   });
 
   res.json({ total: count, logs: rows.map(serializeAudit) });
+}
+
+// ── Sessions ─────────────────────────────────────────────────────────────────
+
+// GET /api/admin/sessions — every active session in the system
+export async function listSessions(req, res) {
+  const sessions = await Session.findAll({
+    where: activeSessionWhere(),
+    include: [{ model: User, as: "user", attributes: ["id", "fullName", "role", "studentId", "email"] }],
+    order: [["lastSeenAt", "DESC"]],
+    limit: 500,
+  });
+  res.json({ sessions: sessions.map((s) => serializeSession(s, req.session.id)) });
+}
+
+// DELETE /api/admin/sessions/:id — end one session
+export async function endSession(req, res) {
+  const session = await Session.findByPk(req.params.id);
+  if (!session) throw notFound("Session not found.");
+  if (session.id === req.session.id) throw badRequest("Use Log out to end your own session.");
+
+  await revokeSession(session.id, "admin");
+  await logAudit({ req, action: "session.ended", entityType: "user", entityId: session.userId });
+  res.json({ message: "Session ended." });
+}
+
+// POST /api/admin/users/:id/logout-all — end every session of a user
+export async function logoutUserEverywhere(req, res) {
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw notFound("User not found.");
+  if (user.id === req.user.id) throw badRequest("Use Log out to end your own sessions.");
+
+  const count = await revokeAllForUser(user.id, "admin");
+  await logAudit({ req, action: "session.ended", entityType: "user", entityId: user.id, details: { sessions: count } });
+  res.json({ message: `Ended ${count} session(s).` });
+}
+
+// ── System status (load balancing, pools, queue, real-time) ─────────────────
+
+// GET /api/admin/system — what THIS server process is doing right now.
+// Behind the load balancer each call may be answered by a different server;
+// the "instance" field shows which one.
+export async function systemStatus(req, res) {
+  const [queue, activeSessions, recentFailures] = await Promise.all([
+    queueStats(),
+    Session.count({ where: activeSessionWhere() }),
+    Job.findAll({
+      where: { status: "failed" },
+      order: [["updatedAt", "DESC"]],
+      limit: 5,
+      attributes: ["id", "type", "attempts", "lastError", "updatedAt"],
+    }),
+  ]);
+
+  const memory = process.memoryUsage();
+  res.json({
+    instance: INSTANCE_ID,
+    pid: process.pid,
+    startedAt: STARTED_AT,
+    uptimeSeconds: Math.round(process.uptime()),
+    memoryMb: Math.round(memory.rss / 1024 / 1024),
+    node: process.version,
+    databasePool: poolStats(),
+    passwordThreads: passwordPoolStats(),
+    realtime: realtimeStats(),
+    eventBus: eventBusStatus(),
+    sessions: { active: activeSessions },
+    queue: { ...queue, recentFailures },
+  });
 }

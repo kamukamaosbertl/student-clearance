@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ClearanceFormProvider } from "./context/ClearanceFormContext";
 import { AuthProvider } from "./context/AuthContext";
+import { LiveEventsProvider } from "./context/LiveEventsContext";
 import RequireAuth from "./components/Requireauth";
 
 import LandingPage from "./pages/LandingPage";
@@ -27,12 +28,15 @@ import ClearanceMonitoring from "./pages/admin/ClearanceMonitoring";
 import Reports from "./pages/admin/Reports";
 import Offices from "./pages/admin/Offices";
 import AuditLogs from "./pages/admin/AuditLogs";
+import Sessions from "./pages/admin/Sessions";
+import SystemStatus from "./pages/admin/SystemStatus";
 import Notifications from "./pages/Notifications";
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <LiveEventsProvider>
         <ClearanceFormProvider>
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -204,10 +208,28 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/admin/sessions"
+              element={
+                <RequireAuth role="admin">
+                  <Sessions />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/system"
+              element={
+                <RequireAuth role="admin">
+                  <SystemStatus />
+                </RequireAuth>
+              }
+            />
+
             {/* unknown routes now land on the landing page, not login */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ClearanceFormProvider>
+        </LiveEventsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

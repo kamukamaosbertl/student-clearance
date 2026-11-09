@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import PageHeader from "../../components/layout/PageHeader";
 import Card from "../../components/ui/Card";
 import api, { apiErrorMessage } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useLiveEvent } from "../../context/LiveEventsContext";
 import { timeAgo } from "../../utils/status";
 import { describeAudit } from "./auditLabels";
 
@@ -15,12 +16,15 @@ export default function AdminDashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .get("/admin/overview")
       .then((res) => setData(res.data))
       .catch((err) => setError(apiErrorMessage(err)));
   }, []);
+
+  useEffect(load, [load]);
+  useLiveEvent("clearance.changed", load);
 
   const stats = data
     ? [

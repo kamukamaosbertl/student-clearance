@@ -1,242 +1,135 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { User, Office } from "../models/index.js";
+import { User, Office, Session } from "../models/index.js";
 import { logAudit } from "../services/auditService.js";
+import { hashPassword, verifyPassword } from "../services/passwordPool.js";
+import {
+  createSession,
+  revokeSession,
+  revokeAllForUser,
+  activeSessionWhere,
+  serializeSession,
+  SESSION_IDLE_MINUTES,
+  SESSION_MAX_HOURS,
+} from "../services/sessionService.js";
 import { serializeUser } from "../utils/serializers.js";
 import { validateNewPassword } from "../utils/validators.js";
 
-// Handles user login
-export const login = async (req, res) => {
-  try {
-    // Get the login details sent by the client
-    const { studentId, password } = req.body;
+// Checks the password and, if it matches, starts a server-side session.
+// Shared by the student and the staff login.
+async function attemptLogin(req, res, { user, identifier, invalidMessage, mustBeStaff }) {
+  const { password } = req.body;
 
-    // Check that both login fields were provided
-    if (!studentId || !password) {
-      return res.status(400).json({
-        message: "Student ID and password are required.",
-      });
-    }
-
-    // Normalize the student ID to avoid false negatives from stray whitespace
-    const normalizedStudentId = studentId.trim();
-
-    // Find the user by their student ID
-    const user = await User.findOne({
-      where: { studentId: normalizedStudentId },
-    });
-
-    // Use the same message whether the ID or password is incorrect
-    // This avoids revealing whether a student ID exists in the system
-    if (!user) {
-      // Run a dummy comparison so the response takes a similar amount of
-      // time whether or not the student ID exists (timing-attack mitigation).
-      // Falls back to skipping the comparison if the env var isn't set,
-      // rather than throwing on an empty/invalid hash.
-      const dummyHash = process.env.DUMMY_BCRYPT_HASH;
-      if (dummyHash) {
-        await bcrypt.compare(password, dummyHash);
-      }
-
-      await logAudit({ req, action: "auth.login_failed", details: { studentId: normalizedStudentId } });
-      return res.status(401).json({
-        message: "Invalid student ID or password.",
-      });
-    }
-
-    // Prevent inactive accounts from logging in
-    if (!user.isActive) {
-      return res.status(403).json({
-        message: "Your account is inactive. Please contact the administrator.",
-      });
-    }
-
-    // Compare the entered password with the stored password hash
-    const passwordIsCorrect = await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
-
-    // Stop the login if the password is incorrect
-    if (!passwordIsCorrect) {
-      await logAudit({ req, userId: user.id, action: "auth.login_failed" });
-      return res.status(401).json({
-        message: "Invalid student ID or password.",
-      });
-    }
-
-    // Fail fast if the server is misconfigured, rather than issuing a broken token
-    if (!process.env.JWT_SECRET) {
-      console.error("Login error: JWT_SECRET is not set");
-      return res.status(500).json({
-        message: "An error occurred during login.",
-      });
-    }
-
-    // Create a JWT containing only the information needed
-    // to identify and authorize the authenticated user
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
-      }
-    );
-
-    await user.update({ lastLoginAt: new Date() });
-    await logAudit({ req, userId: user.id, action: "auth.login" });
-
-    // Return the token and safe user information
-    // Never send the password or password hash to the client
-    return res.status(200).json({
-      message: "Login successful.",
-      token,
-      user: {
-        id: user.id,
-        studentId: user.studentId,
-        fullName: user.fullName,
-        email: user.email,
-        programme: user.programme,
-        faculty: user.faculty,
-        department: user.department,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    // Handle unexpected errors without exposing sensitive details
-    console.error("Login error:", error);
-
-    return res.status(500).json({
-      message: "An error occurred during login.",
-    });
+  // Use the same message whether the account or the password is wrong, so
+  // the response doesn't reveal which accounts exist. Run a dummy
+  // comparison too, so both cases take about the same time.
+  if (!user) {
+    const dummyHash = process.env.DUMMY_BCRYPT_HASH;
+    if (dummyHash) await verifyPassword(password, dummyHash).catch(() => {});
+    await logAudit({ req, action: "auth.login_failed", details: identifier });
+    return res.status(401).json({ message: invalidMessage });
   }
+
+  if (mustBeStaff && user.role === "student") {
+    return res.status(403).json({ message: "Please use the student login page." });
+  }
+
+  if (!user.isActive) {
+    return res.status(403).json({ message: "Your account is inactive. Please contact the administrator." });
+  }
+
+  // bcrypt runs in the password thread pool, not on the main thread
+  const passwordIsCorrect = await verifyPassword(password, user.passwordHash);
+  if (!passwordIsCorrect) {
+    await logAudit({ req, userId: user.id, action: "auth.login_failed" });
+    return res.status(401).json({ message: invalidMessage });
+  }
+
+  const { session, token } = await createSession(user, req);
+  await user.update({ lastLoginAt: new Date() });
+  await logAudit({ req, userId: user.id, action: "auth.login", details: { session: session.id.slice(0, 8) } });
+
+  const withOffice = await User.findByPk(user.id, {
+    include: [{ model: Office, as: "office", attributes: ["id", "name", "slug", "code"] }],
+  });
+
+  // Never send the password hash to the client
+  return res.status(200).json({
+    message: "Login successful.",
+    token,
+    session: {
+      id: session.id,
+      expiresAt: session.expiresAt,
+      idleTimeoutMinutes: SESSION_IDLE_MINUTES,
+      maxHours: SESSION_MAX_HOURS,
+    },
+    user: serializeUser(withOffice),
+  });
+}
+
+// POST /api/auth/login  { studentId, password }
+export const login = async (req, res) => {
+  const { studentId, password } = req.body || {};
+  if (!studentId || !password) {
+    return res.status(400).json({ message: "Student ID and password are required." });
+  }
+
+  const normalizedStudentId = String(studentId).trim();
+  const user = await User.findOne({ where: { studentId: normalizedStudentId } });
+
+  return attemptLogin(req, res, {
+    user,
+    identifier: { studentId: normalizedStudentId },
+    invalidMessage: "Invalid student ID or password.",
+    mustBeStaff: false,
+  });
 };
 
-// Handles officer and admin login (email + password)
+// POST /api/auth/staff-login  { email, password }  (officers and administrators)
 export const staffLogin = async (req, res) => {
-  try {
-    // Get the login details sent by the client
-    const { email, password } = req.body;
-
-    // Check that both login fields were provided
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required.",
-      });
-    }
-
-    // Normalize the email to avoid case/whitespace mismatches
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Find the user by their email
-    const user = await User.findOne({
-      where: { email: normalizedEmail },
-    });
-
-    // Use the same message whether the email or password is incorrect
-    // This avoids revealing whether an email exists in the system
-    if (!user) {
-      // Run a dummy comparison so the response takes a similar amount of
-      // time whether or not the email exists (timing-attack mitigation)
-      const dummyHash = process.env.DUMMY_BCRYPT_HASH;
-      if (dummyHash) {
-        await bcrypt.compare(password, dummyHash);
-      }
-
-      await logAudit({ req, action: "auth.login_failed", details: { email: normalizedEmail } });
-      return res.status(401).json({
-        message: "Invalid email or password.",
-      });
-    }
-
-    // Students must use the student login page, not this one
-    if (user.role === "student") {
-      return res.status(403).json({
-        message: "Please use the student login page.",
-      });
-    }
-
-    // Prevent inactive accounts from logging in
-    if (!user.isActive) {
-      return res.status(403).json({
-        message: "Your account is inactive. Please contact the administrator.",
-      });
-    }
-
-    // Compare the entered password with the stored password hash
-    const passwordIsCorrect = await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
-
-    // Stop the login if the password is incorrect
-    if (!passwordIsCorrect) {
-      await logAudit({ req, userId: user.id, action: "auth.login_failed" });
-      return res.status(401).json({
-        message: "Invalid email or password.",
-      });
-    }
-
-    // Fail fast if the server is misconfigured, rather than issuing a broken token
-    if (!process.env.JWT_SECRET) {
-      console.error("Staff login error: JWT_SECRET is not set");
-      return res.status(500).json({
-        message: "An error occurred during login.",
-      });
-    }
-
-    // Create a JWT containing only the information needed
-    // to identify and authorize the authenticated user
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
-      }
-    );
-
-    await user.update({ lastLoginAt: new Date() });
-    await logAudit({ req, userId: user.id, action: "auth.login" });
-
-    // Officers need to know which office's queue they work on
-    const office = user.officeId
-      ? await Office.findByPk(user.officeId, { attributes: ["id", "name", "slug", "code"] })
-      : null;
-
-    // Return the token and safe user information
-    // Never send the password or password hash to the client
-    return res.status(200).json({
-      message: "Login successful.",
-      token,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        department: user.department,
-        role: user.role,
-        officeId: user.officeId,
-        office: office ? { id: office.id, name: office.name, slug: office.slug, code: office.code } : null,
-      },
-    });
-  } catch (error) {
-    // Handle unexpected errors without exposing sensitive details
-    console.error("Staff login error:", error);
-
-    return res.status(500).json({
-      message: "An error occurred during login.",
-    });
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
   }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const user = await User.findOne({ where: { email: normalizedEmail } });
+
+  return attemptLogin(req, res, {
+    user,
+    identifier: { email: normalizedEmail },
+    invalidMessage: "Invalid email or password.",
+    mustBeStaff: true,
+  });
 };
 
 // GET /api/auth/me — the logged-in user's current details
 export const me = async (req, res) => {
-  res.json({ user: serializeUser(req.user) });
+  res.json({
+    user: serializeUser(req.user),
+    session: { id: req.session.id, expiresAt: req.session.expiresAt, idleTimeoutMinutes: SESSION_IDLE_MINUTES },
+  });
+};
+
+// POST /api/auth/logout — ends this session on the server
+export const logout = async (req, res) => {
+  await revokeSession(req.session.id, "logout");
+  await logAudit({ req, action: "auth.logout" });
+  res.json({ message: "Logged out." });
+};
+
+// POST /api/auth/logout-all — ends every session of this user (all devices)
+export const logoutAll = async (req, res) => {
+  const count = await revokeAllForUser(req.user.id, "logout_all");
+  await logAudit({ req, action: "auth.logout_all", details: { sessions: count } });
+  res.json({ message: `Logged out of ${count} session(s).` });
+};
+
+// GET /api/auth/sessions — this user's active sessions
+export const mySessions = async (req, res) => {
+  const sessions = await Session.findAll({
+    where: { userId: req.user.id, ...activeSessionWhere() },
+    order: [["lastSeenAt", "DESC"]],
+  });
+  res.json({ sessions: sessions.map((s) => serializeSession(s, req.session.id)) });
 };
 
 // POST /api/auth/change-password  { currentPassword, newPassword }
@@ -253,13 +146,14 @@ export const changePassword = async (req, res) => {
   }
 
   const user = await User.findByPk(req.user.id);
-  const passwordIsCorrect = await bcrypt.compare(currentPassword, user.passwordHash);
-  if (!passwordIsCorrect) {
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
     return res.status(400).json({ message: "Your current password is incorrect." });
   }
 
-  await user.update({ passwordHash: await bcrypt.hash(newPassword, 10) });
-  await logAudit({ req, action: "auth.password_changed", entityType: "user", entityId: user.id });
+  await user.update({ passwordHash: await hashPassword(newPassword) });
+  // Anyone else logged in with the old password is signed out
+  const revoked = await revokeAllForUser(user.id, "password_changed", req.session.id);
+  await logAudit({ req, action: "auth.password_changed", entityType: "user", entityId: user.id, details: { otherSessionsEnded: revoked } });
 
-  res.json({ message: "Password changed." });
+  res.json({ message: "Password changed. Your other sessions were signed out." });
 };

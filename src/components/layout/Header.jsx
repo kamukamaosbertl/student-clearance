@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { useAuth } from "../../context/AuthContext";
+import { useLiveStatus } from "../../context/LiveEventsContext";
 import { IconBell } from "../icons";
 import api from "../../api/client";
 
@@ -26,6 +27,19 @@ export default function Header() {
   const { logout, role, isAuthenticated } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const live = useLiveStatus();
+
+  // Why the server ended the last session (idle timeout, logged out
+  // elsewhere, ...) — shown once, on the login page
+  const [sessionMessage, setSessionMessage] = useState(() => {
+    try {
+      const message = sessionStorage.getItem("sessionEndedMessage");
+      sessionStorage.removeItem("sessionEndedMessage");
+      return message;
+    } catch {
+      return null;
+    }
+  });
 
   // Any of the three login pages — not authenticated yet.
   const isAuthPage = AUTH_PATHS.includes(location.pathname);
@@ -55,9 +69,9 @@ export default function Header() {
     };
   }, [showBell, location.pathname]);
 
-  function confirmLogout() {
+  async function confirmLogout() {
     const loginPath = getLoginPathForRole(location.pathname);
-    logout();
+    await logout(); // ends the session on the server too
     setShowLogoutConfirm(false);
     // replace: true so the just-left protected page doesn't sit in
     // history right above the login page — RequireAuth is what
@@ -101,6 +115,22 @@ export default function Header() {
             🔍 Search
           </button>
 
+          {isAuthenticated && !isAuthPage && live.status !== "off" && (
+            <span
+              className="hidden items-center gap-1.5 text-[12px] font-medium text-navy-soft md:flex"
+              title={live.status === "live" ? `Live updates on (server ${live.instance})` : "Reconnecting to live updates…"}
+            >
+              <span
+                className={[
+                  "size-2 rounded-full",
+                  live.status === "live" ? "bg-teal" : "animate-pulse bg-gold",
+                ].join(" ")}
+                aria-hidden="true"
+              />
+              {live.status === "live" ? "Live" : "Reconnecting"}
+            </span>
+          )}
+
           {showBell && (
             <Link
               to={notificationsPath}
@@ -135,6 +165,15 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {sessionMessage && (
+        <div className="flex items-center justify-between gap-4 border-b border-amber-200 bg-amber-bg px-6 py-2.5 text-[13.5px] text-amber-text md:px-8">
+          <span>{sessionMessage}</span>
+          <button type="button" onClick={() => setSessionMessage(null)} className="font-semibold hover:underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={showLogoutConfirm}

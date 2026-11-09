@@ -3,9 +3,10 @@ import api from "../api/client";
 
 const AuthContext = createContext(null);
 
-// Real session state backed by the backend's /api/auth/login endpoint.
-// The token and user are persisted in localStorage so the session
-// survives a page refresh; role/isAuthenticated are derived from user.
+// Login state. The server keeps the real session (see backend
+// services/sessionService.js); the browser only stores the token that
+// points to it, plus a copy of the user for showing names and roles.
+// role/isAuthenticated are derived from user.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,10 +62,29 @@ export function AuthProvider({ children }) {
     return userData;
   }
 
-  function logout() {
+  // Ends the session ON THE SERVER (so the token can't be reused), then
+  // clears it from this browser. The local part runs even if the server
+  // can't be reached.
+  async function logout() {
+    try {
+      if (localStorage.getItem("token")) await api.post("/auth/logout");
+    } catch {
+      /* session already ended or server unreachable */
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+  }
+
+  // Ends every session of this user, on every device
+  async function logoutEverywhere() {
+    try {
+      await api.post("/auth/logout-all");
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+    }
   }
 
   const value = {
@@ -75,6 +95,7 @@ export function AuthProvider({ children }) {
     login,
     staffLogin,
     logout,
+    logoutEverywhere,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

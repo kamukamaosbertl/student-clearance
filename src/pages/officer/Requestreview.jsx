@@ -10,6 +10,7 @@ import StatusBadge from "../../components/ui/Statusbadge";
 import DocumentList from "../../components/clearance/DocumentList";
 import StageHistory from "../../components/clearance/StageHistory";
 import api, { apiErrorMessage } from "../../api/client";
+import { useLiveEvent } from "../../context/LiveEventsContext";
 import { STAGE_LABELS, formatDate, formatDateTime } from "../../utils/status";
 
 function InfoRow({ label, value }) {
@@ -45,6 +46,9 @@ export default function RequestReview() {
       setLoadError(apiErrorMessage(err, "This request could not be loaded."));
     }
   }, [id]);
+
+  // If the student resubmits while the officer has this page open, it updates
+  useLiveEvent("clearance.changed", load);
 
   useEffect(() => {
     setRequest(null);

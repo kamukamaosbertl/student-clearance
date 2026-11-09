@@ -12,6 +12,7 @@ import { validateClearanceInfo, clean } from "../utils/validators.js";
 import { badRequest } from "../utils/httpError.js";
 import { serializeApplication, serializeOffice } from "../utils/serializers.js";
 import { submitApplication, resubmitStage } from "../services/workflowService.js";
+import { cached } from "../utils/cache.js";
 
 // Everything needed to show a full application with its stages
 export const applicationInclude = [
@@ -46,9 +47,13 @@ async function loadCurrentApplication(userId) {
 }
 
 // GET /api/offices — offices in workflow order (any logged-in user)
+// Cached for a minute on each server; changing an office clears every
+// server's copy through the event bus (utils/cache.js)
 export async function listOffices(req, res) {
-  const offices = await Office.findAll({ where: { isActive: true }, order: [["sequence", "ASC"]] });
-  res.json({ offices: offices.map(serializeOffice) });
+  const offices = await cached("offices", 60_000, async () =>
+    (await Office.findAll({ where: { isActive: true }, order: [["sequence", "ASC"]] })).map(serializeOffice)
+  );
+  res.json({ offices });
 }
 
 // GET /api/clearance/me — the student's current clearance request (or null)

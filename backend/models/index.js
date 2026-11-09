@@ -6,6 +6,8 @@ import ClearanceDocument from "./ClearanceDocument.js";
 import StageEvent from "./StageEvent.js";
 import Notification from "./Notification.js";
 import AuditLog from "./AuditLog.js";
+import Session from "./Session.js";
+import Job from "./Job.js";
 
 // User → Applications
 User.hasMany(ClearanceApplication, { foreignKey: "userId", as: "applications" });
@@ -46,6 +48,10 @@ Notification.belongsTo(User, { foreignKey: "userId", as: "user" });
 // User → Audit logs
 AuditLog.belongsTo(User, { foreignKey: "userId", as: "user" });
 
+// User → Sessions (server-side session store)
+User.hasMany(Session, { foreignKey: "userId", as: "sessions" });
+Session.belongsTo(User, { foreignKey: "userId", as: "user" });
+
 export {
   User,
   Office,
@@ -55,4 +61,6 @@ export {
   StageEvent,
   Notification,
   AuditLog,
+  Session,
+  Job,
 };

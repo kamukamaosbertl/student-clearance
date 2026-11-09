@@ -23,15 +23,34 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthCall = error.config?.url?.startsWith("/auth/login") || error.config?.url?.startsWith("/auth/staff-login");
+    const url = error.config?.url || "";
+    const isAuthCall = url.startsWith("/auth/login") || url.startsWith("/auth/staff-login") || url.startsWith("/auth/logout");
     if (error.response?.status === 401 && !isAuthCall && localStorage.getItem("token")) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.assign("/");
+      endLocalSession(error.response.data?.message);
     }
     return Promise.reject(error);
   }
 );
+
+// The server ended the session (logout elsewhere, idle timeout, admin,
+// password change): forget it here, remember why, and go to the right
+// login page. The Header shows the reason once.
+export function endLocalSession(message) {
+  let role = null;
+  try {
+    role = JSON.parse(localStorage.getItem("user") || "null")?.role;
+  } catch {
+    /* ignore */
+  }
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  try {
+    sessionStorage.setItem("sessionEndedMessage", message || "Your session has ended. Please log in again.");
+  } catch {
+    /* ignore */
+  }
+  window.location.assign(role === "officer" ? "/officer/login" : role === "admin" ? "/admin/login" : "/login");
+}
 
 // Human-readable message from an API error
 export function apiErrorMessage(error, fallback = "Something went wrong. Please try again.") {

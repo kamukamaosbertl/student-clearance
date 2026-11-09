@@ -20,6 +20,23 @@ import { academicYearFor } from "../utils/validators.js";
 import HttpError, { badRequest, conflict, forbidden, notFound } from "../utils/httpError.js";
 import { notifyUser, notifyOffice } from "./notificationService.js";
 import { logAudit } from "./auditService.js";
+import { publish } from "./eventBus.js";
+
+// Tells every open screen that shows this request to refresh: the
+// student's own pages, the queues of the offices involved, and the admin
+// monitoring pages. Published inside the transaction, so it only goes out
+// if the change is committed.
+async function publishChange(application, officeIds, department, transaction) {
+  const departmentScope = { officeId: await getDepartmentOfficeId(), department };
+  await publish(
+    "clearance.changed",
+    {
+      audience: { userIds: [application.userId], officeIds: [...new Set(officeIds)], roles: ["admin"], departmentScope },
+      applicationId: application.id,
+    },
+    transaction
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Workflow engine for the long-duration clearance transaction (sections 9, 10
@@ -204,6 +221,8 @@ export async function submitApplication({ req, student, info, filesBySlug }) {
 
     await advanceWorkflow(application, student, transaction);
 
+    await publishChange(application, offices.map((o) => o.id), student.department, transaction);
+
     await logAudit(
       {
         req,
@@ -275,6 +294,8 @@ export async function resubmitStage({ req, student, stageId, files, message }) {
       },
       transaction
     );
+
+    await publishChange(stage.application, [stage.officeId], student.department, transaction);
 
     await logAudit(
       {
@@ -350,6 +371,7 @@ export async function openStage({ officer, stageId }) {
           { actorId: officer.id, action: "opened", fromStatus, toStatus: STAGE_STATUS.UNDER_REVIEW },
           transaction
         );
+        await publishChange(stage.application, [stage.officeId], stage.application.user.department, transaction);
       }
     }
     return stage.id;
@@ -443,6 +465,19 @@ export async function decideStage({ req, officer, stageId, action, comment }) {
     } else if (toStatus === STAGE_STATUS.REJECTED) {
       await application.update({ status: APPLICATION_STATUS.REJECTED }, { transaction });
     }
+
+    // The next office (if any) needs to see the request appear in its queue
+    const nextStage = await ClearanceStage.findOne({
+      where: { applicationId: application.id, status: STAGE_STATUS.PENDING },
+      attributes: ["officeId"],
+      transaction,
+    });
+    await publishChange(
+      application,
+      [stage.officeId, ...(nextStage ? [nextStage.officeId] : [])],
+      student.department,
+      transaction
+    );
 
     await logAudit(
       {

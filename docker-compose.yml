@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# The whole system as containers (n-tier deployment):
+#
+#   web     Nginx: React app + load balancer        http://localhost:8080
+#   api     3 identical API servers (replicas)
+#   worker  background job processor (message queue consumer)
+#   db      PostgreSQL
+#
+#   docker compose up --build
+#   docker compose up --build --scale api=5      ← scale out to 5 API servers
+#
+# Put JWT_SECRET (and optionally DB_PASSWORD, SMTP_*) in a .env file next to
+# this one.
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-backend-env: &backend-env
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: must_clearance
+  DB_USER: postgres
+  DB_PASSWORD: ${DB_PASSWORD:-postgres}
+  DB_POOL_MAX: 10
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  DUMMY_BCRYPT_HASH: $$2a$$10$$CwTycUXWue0Thq9StjUM0uJ8N2E8sWq0nCz1nJZ9E7l5Y6H8F8F8F
+  CLIENT_URL: http://localhost:8080
+  TRUST_PROXY: 1
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: must_clearance
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  # Runs once: creates/updates the tables and imports the CSV users
+  migrate:
+    build: ./backend
+    environment: *backend-env
+    command: >
+      sh -c "npx sequelize-cli db:migrate &&
+             (npx sequelize-cli db:seed:all || true) &&
+             node importStaff.js && node importStudents.js"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    environment: *backend-env
+    deploy:
+      replicas: 3
+    volumes:
+      - uploads:/app/uploads     # every replica sees the same uploaded files
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: ./backend
+    environment: *backend-env
+    command: ["node", "worker.js"]
+    volumes:
+      - outbox:/app/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  db-data:
+  uploads:
+  outbox:

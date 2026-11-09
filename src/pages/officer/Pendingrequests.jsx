@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import PageHeader from "../../components/layout/PageHeader";
@@ -6,6 +6,7 @@ import Card from "../../components/ui/Card";
 import StatusBadge from "../../components/ui/Statusbadge";
 import api, { apiErrorMessage } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useLiveEvent } from "../../context/LiveEventsContext";
 import { STAGE_LABELS, formatDate } from "../../utils/status";
 
 // Filters map to GET /api/officer/requests?status=...
@@ -24,8 +25,7 @@ export default function PendingRequests() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    setIsLoading(true);
+  const load = useCallback(() => {
     api
       .get("/officer/requests", { params: { status: filter } })
       .then(({ data }) => {
@@ -35,6 +35,14 @@ export default function PendingRequests() {
       .catch((err) => setError(apiErrorMessage(err)))
       .finally(() => setIsLoading(false));
   }, [filter]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    load();
+  }, [load]);
+
+  // The queue updates live when requests arrive or are resubmitted
+  useLiveEvent("clearance.changed", load);
 
   const officeName = user?.office?.name || "your office";
 

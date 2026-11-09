@@ -14,11 +14,20 @@ import ReviewStep from "./pages/student/steps/ReviewStep";
 import ClearanceProgress from "./pages/student/ClearanceProgress";
 import CorrectionFeedback from "./pages/student/CorrectionFeedback";
 import OfficerDashboard from "./pages/officer/Dashboard";
-import PendingRequests from "./pages/officer/PendingRequests";
+// Import paths match the real file names exactly — Windows ignores case,
+// but Linux/macOS builds (and most hosting) fail on "PendingRequests" vs
+// "Pendingrequests.jsx".
+import PendingRequests from "./pages/officer/Pendingrequests";
 import RequestReview from "./pages/officer/Requestreview";
-import ProcessingHistory from "./pages/officer/ProcessingHistory";
-import RequestReviewIndex from "./pages/officer/RequestReviewIndex";
+import ProcessingHistory from "./pages/officer/Processinghistory";
+import RequestReviewIndex from "./pages/officer/Requestreviewindex";
 import AdminDashboard from "./pages/admin/Dashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import ClearanceMonitoring from "./pages/admin/ClearanceMonitoring";
+import Reports from "./pages/admin/Reports";
+import Offices from "./pages/admin/Offices";
+import AuditLogs from "./pages/admin/AuditLogs";
+import Notifications from "./pages/Notifications";
 
 export default function App() {
   return (
@@ -84,6 +93,15 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/notifications"
+              element={
+                <RequireAuth role="student">
+                  <Notifications />
+                </RequireAuth>
+              }
+            />
+
             {/* Officer — protected */}
             <Route
               path="/officer/dashboard"
@@ -126,12 +144,62 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/officer/notifications"
+              element={
+                <RequireAuth role="officer">
+                  <Notifications />
+                </RequireAuth>
+              }
+            />
+
             {/* Admin — protected */}
             <Route
               path="/admin/dashboard"
               element={
                 <RequireAuth role="admin">
                   <AdminDashboard />
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/users"
+              element={
+                <RequireAuth role="admin">
+                  <UserManagement />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/monitoring"
+              element={
+                <RequireAuth role="admin">
+                  <ClearanceMonitoring />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/reports"
+              element={
+                <RequireAuth role="admin">
+                  <Reports />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/offices"
+              element={
+                <RequireAuth role="admin">
+                  <Offices />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/audit"
+              element={
+                <RequireAuth role="admin">
+                  <AuditLogs />
                 </RequireAuth>
               }
             />

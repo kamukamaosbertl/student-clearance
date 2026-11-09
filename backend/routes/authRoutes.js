@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import { login, staffLogin } from "../controllers/authController.js";
+import { login, staffLogin, me, changePassword } from "../controllers/authController.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -22,5 +23,13 @@ router.post("/login", loginLimiter, login);
 // Staff (officer/admin) login route
 // POST /api/auth/staff-login
 router.post("/staff-login", loginLimiter, staffLogin);
+
+// Current user
+// GET /api/auth/me
+router.get("/me", authenticate, me);
+
+// Change own password
+// POST /api/auth/change-password
+router.post("/change-password", authenticate, loginLimiter, changePassword);
 
 export default router;

@@ -1,105 +1,84 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import PageHeader from "../../components/layout/PageHeader";
 import Card from "../../components/ui/Card";
+import StatusBadge from "../../components/ui/Statusbadge";
+import DocumentList from "../../components/clearance/DocumentList";
+import StageHistory from "../../components/clearance/StageHistory";
 import { useClearanceForm } from "../../context/ClearanceFormContext";
+import { APPLICATION_LABELS, STAGE_LABELS, NEEDS_STUDENT, formatDate } from "../../utils/status";
 
-// TODO: once a backend exists, this array should come from a real API call
-// (GET /clearance-requests/:id/stages, per section 7.9 "Status Tracking" and
-// 11.2 of the project plan) instead of being hardcoded here. The five
-// offices and their fixed order match section 9.0's workflow diagram:
+// Real stage data from GET /api/clearance/me (section 7.9 "Status
+// Tracking"). Offices are shown in workflow order (section 9.0):
 // Finance → Library → Department/Faculty → Student Affairs → Registrar.
-//
-// Each stage's `status` is one of the transaction states from section 10.0:
-// "pending" | "active" | "done" | "correction" | "rejected"
-const mockStages = [
-  {
-    office: "Finance",
-    status: "done",
-    note: "Approved · 26 Aug 2026",
-  },
-  {
-    office: "Library",
-    status: "correction",
-    note: "Please clear outstanding book fine of UGX 15,000 before resubmitting.",
-  },
-  {
-    office: "Department / Faculty",
-    status: "pending",
-    note: "Waiting for Library",
-  },
-  {
-    office: "Student Affairs",
-    status: "pending",
-    note: "Waiting for Department",
-  },
-  {
-    office: "Academic Registrar",
-    status: "pending",
-    note: "Final stage",
-  },
-];
 
-// One badge per non-neutral state — "pending" and "done" don't need a
-// badge, the dot/checkmark on the left already communicates them clearly.
-function StatusBadge({ status }) {
-  if (status === "correction") {
-    return (
-      <span className="rounded-full bg-amber-bg px-2.5 py-0.5 text-[11.5px] font-semibold text-amber-text">
-        Correction required
-      </span>
-    );
-  }
-  if (status === "rejected") {
-    return (
-      <span className="rounded-full bg-red-bg px-2.5 py-0.5 text-[11.5px] font-semibold text-red-text">
-        Rejected
-      </span>
-    );
-  }
-  return null;
-}
-
+// Dot colour for each stage state
 function StageDot({ status }) {
   const styles = {
-    done: "border-teal bg-teal",
-    active: "border-gold bg-gold",
-    correction: "border-amber-text bg-amber-text",
+    approved: "border-teal bg-teal",
+    pending: "border-gold bg-gold",
+    under_review: "border-gold bg-gold",
+    resubmitted: "border-gold bg-gold",
+    correction_required: "border-amber-text bg-amber-text",
     rejected: "border-red-text bg-red-text",
-    pending: "border-border-strong bg-white",
+    not_required: "border-border-strong bg-surface",
+    waiting: "border-border-strong bg-white",
   };
   return (
     <span
       className={[
         "absolute -left-[7px] top-0.5 size-3.5 rounded-full border-2 transition-colors duration-200",
-        styles[status] ?? styles.pending,
+        styles[status] ?? styles.waiting,
       ].join(" ")}
       aria-hidden="true"
     />
   );
 }
 
+// One line explaining where the stage is
+function stageNote(stage, previous) {
+  switch (stage.status) {
+    case "approved":
+      return `Approved · ${formatDate(stage.decidedAt)}${stage.comment ? ` — "${stage.comment}"` : ""}`;
+    case "pending":
+      return `In ${stage.office.name}'s queue since ${formatDate(stage.queuedAt)}`;
+    case "under_review":
+      return "An officer is reviewing your submission";
+    case "resubmitted":
+      return `Resubmitted ${formatDate(stage.queuedAt)} · awaiting review`;
+    case "correction_required":
+    case "rejected":
+      return stage.comment || "The office needs a response from you.";
+    case "not_required":
+      return "Not applicable — no documents were submitted for this office";
+    default:
+      return stage.office.requiresDocuments
+        ? `Waiting for ${previous?.office.name || "the previous office"}`
+        : "Final stage — starts when every other office has cleared you";
+  }
+}
+
 export default function ClearanceProgress() {
-  const { formData } = useClearanceForm();
-  const hasSubmitted = Boolean(formData.details.reason); // crude "has this student submitted anything" check for now
+  const { application, hasLoaded } = useClearanceForm();
+  const [openStageId, setOpenStageId] = useState(null);
+
+  const stages = application?.stages || [];
 
   return (
     <AppShell>
       <PageHeader
         eyebrow="Student"
         title="Clearance progress"
-        description="Your request moves through five offices in order. Completed stages stay completed."
+        description="Your request moves through the offices in order. Completed stages stay completed."
       />
 
       <Card className="w-[660px]">
-        {!hasSubmitted ? (
-          // Nothing submitted yet — point the student back to the wizard
-          // instead of showing five empty "pending" rows, which would look
-          // broken rather than just "not started."
+        {!hasLoaded ? (
+          <p className="text-[13.5px] text-body">Loading…</p>
+        ) : !application ? (
           <div className="flex flex-col items-start gap-3">
-            <p className="text-[13.5px] text-body">
-              You haven't submitted a clearance request yet.
-            </p>
+            <p className="text-[13.5px] text-body">You haven't submitted a clearance request yet.</p>
             <Link
               to="/clearance/personal"
               className="text-[13.5px] font-semibold text-teal transition-colors hover:text-teal-dark"
@@ -108,26 +87,71 @@ export default function ClearanceProgress() {
             </Link>
           </div>
         ) : (
-          <ol className="relative flex flex-col gap-6 pl-4">
-            {mockStages.map((stage, index) => (
-              <li key={stage.office} className="relative pl-4">
-                {/* connecting line to the next stage — omitted after the last item */}
-                {index < mockStages.length - 1 && (
-                  <span
-                    className="absolute -left-[1px] top-4 h-[calc(100%+0.5rem)] w-[1.5px] bg-border"
-                    aria-hidden="true"
-                  />
-                )}
-                <StageDot status={stage.status} />
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] text-body">
+                Submitted {formatDate(application.startedAt)} · {application.academicYear}
+              </p>
+              <StatusBadge status={application.status}>{APPLICATION_LABELS[application.status]}</StatusBadge>
+            </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-[14.5px] font-semibold text-navy">{stage.office}</h3>
-                  <StatusBadge status={stage.status} />
-                </div>
-                <p className="mt-0.5 text-[13px] text-body">{stage.note}</p>
-              </li>
-            ))}
-          </ol>
+            {application.status === "completed" && (
+              <div className="rounded-field bg-green-bg px-4 py-3 text-[13.5px] font-semibold text-teal-dark">
+                🎓 Clearance completed on {formatDate(application.completedAt)}. You're cleared for graduation.
+              </div>
+            )}
+
+            <ol className="relative flex flex-col gap-6 pl-4">
+              {stages.map((stage, index) => {
+                const isOpen = openStageId === stage.id;
+                return (
+                  <li key={stage.id} className="relative pl-4">
+                    {index < stages.length - 1 && (
+                      <span
+                        className="absolute -left-[1px] top-4 h-[calc(100%+0.5rem)] w-[1.5px] bg-border"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <StageDot status={stage.status} />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-[14.5px] font-semibold text-navy">{stage.office.name}</h3>
+                      <StatusBadge status={stage.status}>{STAGE_LABELS[stage.status]}</StatusBadge>
+                    </div>
+                    <p className="mt-0.5 text-[13px] text-body">{stageNote(stage, stages[index - 1])}</p>
+
+                    <div className="mt-1 flex gap-4">
+                      {NEEDS_STUDENT.includes(stage.status) && (
+                        <Link to="/clearance/feedback" className="text-[12.5px] font-semibold text-teal hover:underline">
+                          Respond →
+                        </Link>
+                      )}
+                      {(stage.documents.length > 0 || stage.events.length > 1) && (
+                        <button
+                          type="button"
+                          onClick={() => setOpenStageId(isOpen ? null : stage.id)}
+                          className="text-[12.5px] font-semibold text-navy-soft hover:text-navy"
+                        >
+                          {isOpen
+                            ? "Hide details"
+                            : stage.documents.length > 0
+                            ? `Details (${stage.documents.length} document${stage.documents.length === 1 ? "" : "s"})`
+                            : "Details"}
+                        </button>
+                      )}
+                    </div>
+
+                    {isOpen && (
+                      <div className="mt-3 flex flex-col gap-4 rounded-field border border-border p-4">
+                        <DocumentList documents={stage.documents} />
+                        <StageHistory events={stage.events} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </>
         )}
       </Card>
     </AppShell>

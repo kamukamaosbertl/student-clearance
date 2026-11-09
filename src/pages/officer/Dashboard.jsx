@@ -1,11 +1,13 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import PageHeader from "../../components/layout/PageHeader";
 import Card from "../../components/ui/Card";
 import StatusBadge from "../../components/ui/Statusbadge";
+import api, { apiErrorMessage } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
+import { STAGE_LABELS } from "../../utils/status";
 
-// TODO: replace with the real signed-in officer's name and office
-// once auth is wired up — for now this only computes a time-of-day
-// greeting, which doesn't need a backend.
 function getTimeOfDayGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -13,67 +15,115 @@ function getTimeOfDayGreeting() {
   return "Good evening";
 }
 
-// TODO: replace with real data once the API is wired up.
-const stats = [
-  { label: "Pending review", value: 14 },
-  { label: "Correction requested", value: 6 },
-  { label: "Approved this semester", value: 128 },
-  { label: "Rejected", value: 2 },
-];
-
-// TODO: replace with the real "needs attention" query result.
-const needsAttention = [
-  { student: "Atuhe Joel", regNo: "2023/BSE/031/PS", waiting: "5 days", status: "overdue", statusLabel: "Overdue" },
-  { student: "Nyakato Sheila", regNo: "2023/BSE/124/PS", waiting: "4 days", status: "pending", statusLabel: "Pending" },
-];
+function QueueTable({ rows, showOverdue }) {
+  return (
+    <table className="w-full text-left">
+      <thead>
+        <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-navy-soft">
+          <th className="py-2 pr-4 font-semibold">Student</th>
+          <th className="py-2 pr-4 font-semibold">Reg. no.</th>
+          <th className="py-2 pr-4 font-semibold">Waiting</th>
+          <th className="py-2 pr-4 font-semibold">Status</th>
+          <th className="py-2" />
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.stageId} className="border-b border-border last:border-0">
+            <td className="py-3 pr-4 text-[14px] font-medium text-navy">{row.student.fullName}</td>
+            <td className="py-3 pr-4 text-[14px] text-navy-soft">{row.student.studentId}</td>
+            <td className="py-3 pr-4 text-[14px] text-navy-soft">
+              {row.daysWaiting === 0 ? "Today" : `${row.daysWaiting} day${row.daysWaiting === 1 ? "" : "s"}`}
+            </td>
+            <td className="py-3 pr-4">
+              {showOverdue ? (
+                <StatusBadge status="overdue">Overdue</StatusBadge>
+              ) : (
+                <StatusBadge status={row.status}>{STAGE_LABELS[row.status]}</StatusBadge>
+              )}
+            </td>
+            <td className="py-3 text-right">
+              <Link to={`/officer/request/${row.stageId}`} className="text-[13.5px] font-semibold text-teal hover:underline">
+                Open →
+              </Link>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .get("/officer/dashboard")
+      .then((res) => setData(res.data))
+      .catch((err) => setError(apiErrorMessage(err)));
+  }, []);
+
+  const officeName = data?.office?.name || user?.office?.name || "";
+  const stats = data
+    ? [
+        { label: "Pending review", value: data.stats.pending },
+        { label: "Correction requested", value: data.stats.correctionRequested },
+        { label: "Approved this semester", value: data.stats.approvedThisSemester },
+        { label: "Rejected", value: data.stats.rejected },
+      ]
+    : [];
+
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Officer"
+        eyebrow={`Officer${officeName ? ` · ${officeName}` : ""}`}
         title="Dashboard"
-        description={`${getTimeOfDayGreeting()} — here's your queue and recent activity.`}
+        description={`${getTimeOfDayGreeting()}, ${user?.fullName?.split(" ")[0] || "officer"} — here's your queue and what needs attention.`}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="p-5">
-            <p className="text-[26px] font-bold text-navy">{stat.value}</p>
-            <p className="text-[13px] text-navy-soft">{stat.label}</p>
-          </Card>
-        ))}
-      </div>
+      {error && <Card><p className="text-[13.5px] text-danger">{error}</p></Card>}
 
-      <Card className="p-6">
-        <h3 className="text-[15px] font-semibold text-navy">Needs attention today</h3>
-        <p className="mb-4 text-[13px] text-navy-soft">
-          Requests sitting in your queue for more than 3 days.
-        </p>
-
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-navy-soft">
-              <th className="py-2 pr-4 font-semibold">Student</th>
-              <th className="py-2 pr-4 font-semibold">Reg. no.</th>
-              <th className="py-2 pr-4 font-semibold">Waiting</th>
-              <th className="py-2 pr-4 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {needsAttention.map((row) => (
-              <tr key={row.regNo} className="border-b border-border last:border-0">
-                <td className="py-3 pr-4 text-[14px] font-medium text-navy">{row.student}</td>
-                <td className="py-3 pr-4 text-[14px] text-navy-soft">{row.regNo}</td>
-                <td className="py-3 pr-4 text-[14px] text-navy-soft">{row.waiting}</td>
-                <td className="py-3 pr-4">
-                  <StatusBadge status={row.status}>{row.statusLabel}</StatusBadge>
-                </td>
-              </tr>
+      {data && (
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {stats.map((stat) => (
+              <Card key={stat.label} className="p-5">
+                <p className="text-[26px] font-bold text-navy">{stat.value}</p>
+                <p className="text-[13px] text-navy-soft">{stat.label}</p>
+              </Card>
             ))}
-          </tbody>
-        </table>
-      </Card>
+          </div>
+
+          <Card className="p-6">
+            <h3 className="text-[15px] font-semibold text-navy">Needs attention today</h3>
+            <p className="mb-2 text-[13px] text-navy-soft">
+              Requests sitting in your queue for {data.overdueDays} days or more.
+            </p>
+            {data.needsAttention.length === 0 ? (
+              <p className="text-[13.5px] text-navy-soft">Nothing overdue — nice work.</p>
+            ) : (
+              <QueueTable rows={data.needsAttention} showOverdue />
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-navy">Next in your queue</h3>
+              <Link to="/officer/queue" className="text-[13px] font-semibold text-teal hover:underline">
+                View all →
+              </Link>
+            </div>
+            {data.nextUp.length === 0 ? (
+              <p className="text-[13.5px] text-navy-soft">Your queue is empty.</p>
+            ) : (
+              <QueueTable rows={data.nextUp} />
+            )}
+          </Card>
+        </>
+      )}
     </AppShell>
   );
 }

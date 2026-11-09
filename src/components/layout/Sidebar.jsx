@@ -55,7 +55,8 @@ export default function Sidebar() {
           // Officer/Admin have no equivalent "hasStarted" concept.
           // Dashboard itself is always accessible, since it's the only
           // way IN to starting the wizard.
-          const isLocked = role === "student" && item.key !== "dashboard" && !hasStarted;
+          const isLocked =
+            role === "student" && !["dashboard", "notifications"].includes(item.key) && !hasStarted;
 
           const isActive =
             item.key === "clearance-request"

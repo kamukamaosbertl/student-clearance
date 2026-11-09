@@ -7,6 +7,7 @@ export const studentNavItems = [
   { key: "clearance-request", label: "Clearance request", path: "/clearance/personal" },
   { key: "clearance-progress", label: "Clearance progress", path: "/clearance/progress" },
   { key: "correction-feedback", label: "Correction / feedback", path: "/clearance/feedback" },
+  { key: "notifications", label: "Notifications", path: "/notifications" },
 ];
 
 // Step 1 is the student's own info (personal + academic + reason for
@@ -31,13 +32,15 @@ export const officerNavItems = [
   { key: "queue", label: "Pending requests", path: "/officer/queue" },
   { key: "request-review", label: "Request review", path: "/officer/request" },
   { key: "processing-history", label: "Processing history", path: "/officer/history" },
+  { key: "notifications", label: "Notifications", path: "/officer/notifications" },
 ];
   
 // "Admin screens" list — same idea, for admin routes.
 export const adminNavItems = [
-  { key: "login", label: "Log in", path: "/admin/login" },
+  { key: "dashboard", label: "Dashboard", path: "/admin/dashboard" },
   { key: "user-management", label: "User management", path: "/admin/users" },
   { key: "monitoring", label: "Clearance monitoring", path: "/admin/monitoring" },
   { key: "reports", label: "Reports", path: "/admin/reports" },
+  { key: "offices", label: "Offices & workflow", path: "/admin/offices" },
   { key: "audit-logs", label: "System activity / audit logs", path: "/admin/audit" },
 ];

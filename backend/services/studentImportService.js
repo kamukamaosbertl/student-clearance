@@ -33,15 +33,28 @@ const importStudentsFromCSV = () => {
       // Run after the whole CSV has been read
       .on("end", async () => {
         try {
+          let importedCount = 0;
+          let skippedCount = 0;
+
           // Process each student
           for (const student of students) {
+            // Skip students that were already imported, so the script
+            // can be run again safely after adding rows to the CSV
+            const existing = await User.findOne({
+              where: { studentId: student.studentId.trim() },
+            });
+
+            if (existing) {
+              skippedCount++;
+              continue;
+            }
 
             // Hash the student's password
             const passwordHash = await bcrypt.hash(student.password, 10);
 
             // Save the student in the users table
             await User.create({
-              studentId: student.studentId,
+              studentId: student.studentId.trim(),
               fullName: student.fullName,
               programme: student.programme,
               faculty: student.faculty,
@@ -50,11 +63,13 @@ const importStudentsFromCSV = () => {
               role: "student",
               isActive: true,
             });
+
+            importedCount++;
           }
 
           // Report how many students were imported
           resolve({
-            message: `${students.length} students imported successfully.`,
+            message: `${importedCount} students imported successfully. ${skippedCount} skipped (already existed).`,
           });
         } catch (error) {
           // Handle database errors

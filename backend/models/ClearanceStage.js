@@ -1,6 +1,8 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
+import { STAGE_STATUS } from "../utils/constants.js";
 
+// One office's part of a clearance request (section 10.0 stage states).
 const ClearanceStage = sequelize.define(
   "ClearanceStage",
   {
@@ -21,21 +23,39 @@ const ClearanceStage = sequelize.define(
       allowNull: false,
     },
 
-    status: {
-      type: DataTypes.ENUM(
-        "pending",
-        "submitted",
-        "under_review",
-        "cleared",
-        "rejected",
-        "not_required"
-      ),
+    // Copied from the office when the application is created, so later
+    // changes to office order don't reshuffle requests already in progress
+    sequence: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: "pending",
+      defaultValue: 0,
     },
 
+    status: {
+      type: DataTypes.ENUM(...Object.values(STAGE_STATUS)),
+      allowNull: false,
+      defaultValue: STAGE_STATUS.WAITING,
+    },
+
+    // Latest comment from the officer (shown to the student)
     comment: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    // When the stage last entered the office's work queue
+    queuedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    decidedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
+    decidedAt: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
 

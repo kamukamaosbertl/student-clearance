@@ -56,9 +56,20 @@ const User = sequelize.define(
       defaultValue: "student",
     },
 
+    // Office an officer works for — decides which stages they can process
+    officeId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+    },
+
+    lastLoginAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {

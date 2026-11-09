@@ -5,7 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:seed": "sequelize-cli db:seed:all",
+    "import:staff": "node importStaff.js",
+    "import:students": "node importStudents.js",
+    "setup": "npm run db:migrate && npm run db:seed && npm run import:staff && npm run import:students",
+    "test:e2e": "node tests/workflow.e2e.mjs"
   },
   "keywords": [],
   "author": "",

@@ -8,7 +8,7 @@ import Textarea from "../../../components/ui/Textarea";
 import Button from "../../../components/ui/Button";
 import WizardCard from "../WizardCard";
 import { useClearanceForm } from "../../../context/ClearanceFormContext";
-import { currentUser } from "../../../data/currentUser";
+import { useAuth } from "../../../context/AuthContext";
 import { validateEmail, validatePhone, validateRequiredSelect } from "../../../utils/validators";
 
 const YEARS_OF_STUDY = ["Year 1", "Year 2", "Year 3", "Final year"];
@@ -18,6 +18,8 @@ const CLEARANCE_REASONS = ["Final graduation clearance", "Provisional clearance"
 export default function PersonalInfoStep() {
   const navigate = useNavigate();
   const { formData, updateSection, startClearance } = useClearanceForm();
+  // Account and academic record fields come from the logged-in student
+  const { user: currentUser } = useAuth();
   const { email, phone } = formData.personal;
   const { yearOfStudy, graduationYear } = formData.academic;
   const { reason, notes } = formData.details;
@@ -58,14 +60,14 @@ export default function PersonalInfoStep() {
       >
         <form onSubmit={handleNext} noValidate className="flex flex-col gap-[18px]">
           <div className="flex gap-5">
-            <Input label="Student ID" sourceLabel="from account" readOnly value={currentUser.studentId} className="w-[270px]" />
-            <Input label="Full name" sourceLabel="from account" readOnly value={currentUser.fullName} className="w-[270px]" />
+            <Input label="Student ID" sourceLabel="from account" readOnly value={currentUser?.studentId || ""} className="w-[270px]" />
+            <Input label="Full name" sourceLabel="from account" readOnly value={currentUser?.fullName || ""} className="w-[270px]" />
           </div>
-          <Input label="Programme" sourceLabel="from account" readOnly value={currentUser.programme} className="w-[600px]" />
+          <Input label="Programme" sourceLabel="from account" readOnly value={currentUser?.programme || ""} className="w-[600px]" />
 
           <div className="flex gap-5">
-            <Input label="Faculty" sourceLabel="from record" readOnly value={currentUser.faculty} className="w-[290px]" />
-            <Input label="Department" sourceLabel="from record" readOnly value={currentUser.department} className="w-[290px]" />
+            <Input label="Faculty" sourceLabel="from record" readOnly value={currentUser?.faculty || ""} className="w-[290px]" />
+            <Input label="Department" sourceLabel="from record" readOnly value={currentUser?.department || ""} className="w-[290px]" />
           </div>
 
           <div className="flex gap-5">

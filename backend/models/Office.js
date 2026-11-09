@@ -23,11 +23,35 @@ const Office = sequelize.define(
       unique: true,
     },
 
+    // Stable key shared with the frontend (finance, library, department, ...)
+    slug: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+
+    // Position of this office in the clearance workflow (1 = first)
+    sequence: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
+    // false for the Academic Registrar, which finalizes rather than
+    // collecting documents from the student
+    requiresDocuments: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
+    // Optional offices (isRequired = false) are skipped when the student
+    // does not submit anything for them
     isRequired: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

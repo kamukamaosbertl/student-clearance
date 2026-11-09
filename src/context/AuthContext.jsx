@@ -21,6 +21,17 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
       }
+
+      // Refresh the stored profile in the background (role, office or
+      // name may have been changed by an administrator). An expired token
+      // is handled by the 401 interceptor in api/client.js.
+      api
+        .get("/auth/me")
+        .then(({ data }) => {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          setUser(data.user);
+        })
+        .catch(() => {});
     }
 
     setIsLoading(false);

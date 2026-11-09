@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { User } from "../models/index.js";
+import { User, Office } from "../models/index.js";
+import { logAudit } from "../services/auditService.js";
+import { serializeUser } from "../utils/serializers.js";
+import { validateNewPassword } from "../utils/validators.js";
 
 // Handles user login
 export const login = async (req, res) => {
@@ -35,6 +38,7 @@ export const login = async (req, res) => {
         await bcrypt.compare(password, dummyHash);
       }
 
+      await logAudit({ req, action: "auth.login_failed", details: { studentId: normalizedStudentId } });
       return res.status(401).json({
         message: "Invalid student ID or password.",
       });
@@ -55,6 +59,7 @@ export const login = async (req, res) => {
 
     // Stop the login if the password is incorrect
     if (!passwordIsCorrect) {
+      await logAudit({ req, userId: user.id, action: "auth.login_failed" });
       return res.status(401).json({
         message: "Invalid student ID or password.",
       });
@@ -80,6 +85,9 @@ export const login = async (req, res) => {
         expiresIn: "1d",
       }
     );
+
+    await user.update({ lastLoginAt: new Date() });
+    await logAudit({ req, userId: user.id, action: "auth.login" });
 
     // Return the token and safe user information
     // Never send the password or password hash to the client
@@ -138,6 +146,7 @@ export const staffLogin = async (req, res) => {
         await bcrypt.compare(password, dummyHash);
       }
 
+      await logAudit({ req, action: "auth.login_failed", details: { email: normalizedEmail } });
       return res.status(401).json({
         message: "Invalid email or password.",
       });
@@ -165,6 +174,7 @@ export const staffLogin = async (req, res) => {
 
     // Stop the login if the password is incorrect
     if (!passwordIsCorrect) {
+      await logAudit({ req, userId: user.id, action: "auth.login_failed" });
       return res.status(401).json({
         message: "Invalid email or password.",
       });
@@ -191,6 +201,14 @@ export const staffLogin = async (req, res) => {
       }
     );
 
+    await user.update({ lastLoginAt: new Date() });
+    await logAudit({ req, userId: user.id, action: "auth.login" });
+
+    // Officers need to know which office's queue they work on
+    const office = user.officeId
+      ? await Office.findByPk(user.officeId, { attributes: ["id", "name", "slug", "code"] })
+      : null;
+
     // Return the token and safe user information
     // Never send the password or password hash to the client
     return res.status(200).json({
@@ -202,6 +220,8 @@ export const staffLogin = async (req, res) => {
         email: user.email,
         department: user.department,
         role: user.role,
+        officeId: user.officeId,
+        office: office ? { id: office.id, name: office.name, slug: office.slug, code: office.code } : null,
       },
     });
   } catch (error) {
@@ -212,4 +232,34 @@ export const staffLogin = async (req, res) => {
       message: "An error occurred during login.",
     });
   }
+};
+
+// GET /api/auth/me — the logged-in user's current details
+export const me = async (req, res) => {
+  res.json({ user: serializeUser(req.user) });
+};
+
+// POST /api/auth/change-password  { currentPassword, newPassword }
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: "Current and new password are required." });
+  }
+
+  const passwordError = validateNewPassword(newPassword);
+  if (passwordError) {
+    return res.status(400).json({ message: passwordError });
+  }
+
+  const user = await User.findByPk(req.user.id);
+  const passwordIsCorrect = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!passwordIsCorrect) {
+    return res.status(400).json({ message: "Your current password is incorrect." });
+  }
+
+  await user.update({ passwordHash: await bcrypt.hash(newPassword, 10) });
+  await logAudit({ req, action: "auth.password_changed", entityType: "user", entityId: user.id });
+
+  res.json({ message: "Password changed." });
 };

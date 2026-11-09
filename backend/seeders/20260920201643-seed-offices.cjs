@@ -7,6 +7,9 @@ module.exports = {
       {
         name: "Finance",
         code: "FIN",
+        slug: "finance",
+        sequence: 1,
+        requiresDocuments: true,
         description: "Handles student financial clearance.",
         isRequired: true,
         isActive: true,
@@ -16,6 +19,9 @@ module.exports = {
       {
         name: "Library",
         code: "LIB",
+        slug: "library",
+        sequence: 2,
+        requiresDocuments: true,
         description: "Handles library clearance and outstanding materials.",
         isRequired: true,
         isActive: true,
@@ -25,6 +31,9 @@ module.exports = {
       {
         name: "Department",
         code: "DEPT",
+        slug: "department",
+        sequence: 3,
+        requiresDocuments: true,
         description: "Handles academic and departmental clearance.",
         isRequired: true,
         isActive: true,
@@ -34,6 +43,9 @@ module.exports = {
       {
         name: "Student Affairs",
         code: "SA",
+        slug: "studentAffairs",
+        sequence: 4,
+        requiresDocuments: true,
         description: "Handles student affairs clearance.",
         isRequired: false,
         isActive: true,
@@ -43,6 +55,9 @@ module.exports = {
       {
         name: "Academic Registrar",
         code: "AR",
+        slug: "registrar",
+        sequence: 5,
+        requiresDocuments: false,
         description: "Handles final academic clearance.",
         isRequired: true,
         isActive: true,

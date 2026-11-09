@@ -1,6 +1,9 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
 
+// The long-duration clearance transaction (section 9.0). One row per
+// clearance request; it stays "in_progress" while it moves through the
+// offices and only becomes "completed" when the Registrar finalizes it.
 const ClearanceApplication = sequelize.define(
   "ClearanceApplication",
   {
@@ -22,14 +25,40 @@ const ClearanceApplication = sequelize.define(
     },
 
     status: {
-      type: DataTypes.ENUM(
-        "draft",
-        "in_progress",
-        "completed",
-        "rejected"
-      ),
+      type: DataTypes.ENUM("draft", "in_progress", "completed", "rejected"),
       allowNull: false,
       defaultValue: "draft",
+    },
+
+    // Information submitted by the student (section 7.3)
+    contactEmail: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+
+    yearOfStudy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    graduationYear: {
+      type: DataTypes.STRING(4),
+      allowNull: true,
+    },
+
+    reason: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
 
     startedAt: {

@@ -5,7 +5,8 @@ import PageHeader from "../../../components/layout/PageHeader";
 import Button from "../../../components/ui/Button";
 import WizardCard from "../WizardCard";
 import { useClearanceForm } from "../../../context/ClearanceFormContext";
-import { currentUser } from "../../../data/currentUser";
+import { useAuth } from "../../../context/AuthContext";
+import { apiErrorMessage } from "../../../api/client";
 import { DOCUMENT_OFFICES } from "../../../data/offices";
 import { validateEmail, validatePhone, validateRequiredSelect, validateAtLeastOneFile } from "../../../utils/validators";
 
@@ -20,15 +21,15 @@ function SummaryRow({ label, value }) {
 
 export default function ReviewStep() {
   const navigate = useNavigate();
-  // CHANGED: also pull submitClearance — this is what actually moves every
-  // office's stage from "not_started" to "pending" so ClearanceProgress.jsx
-  // has something real to show after this screen.
-  const { formData, submitClearance, resetForm } = useClearanceForm();
+  // submitClearance sends everything to POST /api/clearance
+  const { formData, submitClearance } = useClearanceForm();
+  const { user: currentUser } = useAuth();
   const { personal, academic, details, documents } = formData;
 
   const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (Boolean(validateEmail(personal.email)) || Boolean(validatePhone(personal.phone))) {
@@ -63,12 +64,21 @@ export default function ReviewStep() {
     }
 
     setSubmitError("");
-    // TODO: POST to the clearance-requests endpoint. On server rejection,
-    // set submitError and DON'T call submitClearance/resetForm — keep the
-    // student's data on screen so they don't lose it.
-    submitClearance(); // moves every required office's stage to "pending"
-    resetForm();
-    navigate("/clearance/progress");
+    setIsSubmitting(true);
+
+    // POST /api/clearance with the form fields and every office's files.
+    // On failure the student's data stays on screen so nothing is lost.
+    try {
+      await submitClearance();
+      navigate("/clearance/progress");
+    } catch (error) {
+      const fieldErrors = error.response?.data?.details?.fields;
+      setSubmitError(
+        fieldErrors ? Object.values(fieldErrors).join(" ") : apiErrorMessage(error, "Your request could not be submitted.")
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const lastOfficeKey = DOCUMENT_OFFICES[DOCUMENT_OFFICES.length - 1].key;
@@ -80,12 +90,12 @@ export default function ReviewStep() {
       <WizardCard stepKey="review" title="Review & submit" description="Check everything below before sending it to the offices.">
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-[18px]">
           <div className="flex flex-col">
-            <SummaryRow label="Student ID" value={currentUser.studentId} />
-            <SummaryRow label="Full name" value={currentUser.fullName} />
+            <SummaryRow label="Student ID" value={currentUser?.studentId} />
+            <SummaryRow label="Full name" value={currentUser?.fullName} />
             <SummaryRow label="Email address" value={personal.email} />
             <SummaryRow label="Phone number" value={personal.phone} />
-            <SummaryRow label="Faculty" value={currentUser.faculty} />
-            <SummaryRow label="Department" value={currentUser.department} />
+            <SummaryRow label="Faculty" value={currentUser?.faculty} />
+            <SummaryRow label="Department" value={currentUser?.department} />
             <SummaryRow label="Year of study" value={academic.yearOfStudy} />
             <SummaryRow label="Expected graduation year" value={academic.graduationYear} />
             <SummaryRow label="Reason for clearance" value={details.reason} />
@@ -110,7 +120,9 @@ export default function ReviewStep() {
             <Button type="button" variant="secondary" onClick={() => navigate(`/clearance/office/${lastOfficeKey}`)}>
               Back
             </Button>
-            <Button type="submit">Submit clearance request</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting…" : "Submit clearance request"}
+            </Button>
           </div>
         </form>
       </WizardCard>

@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import csv from "csv-parser";
 import bcrypt from "bcryptjs";
-import { User } from "../models/index.js";
+import { User, Office } from "../models/index.js";
 
 // Find the current services folder
 const __filename = fileURLToPath(import.meta.url);
@@ -35,12 +35,25 @@ const importStaffFromCSV = () => {
           let importedCount = 0;
           let skippedCount = 0;
 
+          // Officers are linked to the office matching their department
+          // ("Finance", "Library", ...). Officers of an academic department
+          // (e.g. "Software Engineering") belong to the Department office.
+          const offices = await Office.findAll();
+          const departmentOffice = offices.find((o) => o.slug === "department");
+          const officeFor = (staff) => {
+            if (staff.role !== "officer") return null;
+            const match = offices.find(
+              (o) => o.name.toLowerCase() === (staff.department || "").trim().toLowerCase()
+            );
+            return (match || departmentOffice)?.id ?? null;
+          };
+
           // Process each staff member
           for (const staff of staffMembers) {
 
             // Skip if this email is already in the database
             const existing = await User.findOne({
-              where: { email: staff.email },
+              where: { email: staff.email.trim().toLowerCase() },
             });
 
             if (existing) {
@@ -54,10 +67,11 @@ const importStaffFromCSV = () => {
             // Save the staff member in the users table
             await User.create({
               fullName: staff.fullName,
-              email: staff.email,
-              department: staff.department,
+              email: staff.email.trim().toLowerCase(),
+              department: staff.department || null,
               passwordHash,
               role: staff.role, // "officer" or "admin"
+              officeId: officeFor(staff),
               isActive: true,
             });
 

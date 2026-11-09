@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Brand from "./Brand";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { useAuth } from "../../context/AuthContext";
+import { IconBell } from "../icons";
+import api from "../../api/client";
 
 const AUTH_PATHS = ["/login", "/officer/login", "/admin/login"];
 
@@ -21,11 +23,37 @@ function getLoginPathForRole(pathname) {
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, role, isAuthenticated } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Any of the three login pages — not authenticated yet.
   const isAuthPage = AUTH_PATHS.includes(location.pathname);
+
+  // Students and officers receive notifications (section 7.10)
+  const notificationsPath =
+    role === "student" ? "/notifications" : role === "officer" ? "/officer/notifications" : null;
+  const showBell = isAuthenticated && !isAuthPage && notificationsPath;
+
+  // Refresh the unread count on every page change, every minute, and
+  // whenever the notifications page marks something as read
+  useEffect(() => {
+    if (!showBell) return undefined;
+    let cancelled = false;
+    const refresh = () =>
+      api
+        .get("/notifications", { params: { unread: true } })
+        .then(({ data }) => !cancelled && setUnreadCount(data.unreadCount))
+        .catch(() => {});
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    window.addEventListener("notifications:changed", refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("notifications:changed", refresh);
+    };
+  }, [showBell, location.pathname]);
 
   function confirmLogout() {
     const loginPath = getLoginPathForRole(location.pathname);
@@ -72,6 +100,21 @@ export default function Header() {
           >
             🔍 Search
           </button>
+
+          {showBell && (
+            <Link
+              to={notificationsPath}
+              className="relative text-navy transition-colors hover:text-teal"
+              aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}
+            >
+              <IconBell className="size-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-2 -top-1.5 flex min-w-[18px] items-center justify-center rounded-full bg-red-text px-1 text-[10.5px] font-bold leading-[18px] text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* Login / Logout */}
           {isAuthPage ? (

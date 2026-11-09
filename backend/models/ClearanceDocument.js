@@ -21,27 +21,39 @@ const ClearanceDocument = sequelize.define(
       allowNull: false,
     },
 
+    // "initial" for documents sent with the request, "correction" for
+    // documents sent when responding to an officer
     documentType: {
       type: DataTypes.STRING,
       allowNull: false,
     },
 
+    // Original file name as uploaded by the student (display only)
     fileName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
 
-    filePath: {
+    // Random name of the file inside the uploads folder. The column is
+    // called storageKey in the migration — the old model called it
+    // filePath, which didn't match the table and would fail on insert.
+    storageKey: {
       type: DataTypes.STRING,
       allowNull: false,
     },
 
+    mimeType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    fileSize: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     status: {
-      type: DataTypes.ENUM(
-        "submitted",
-        "approved",
-        "rejected"
-      ),
+      type: DataTypes.ENUM("submitted", "approved", "rejected"),
       allowNull: false,
       defaultValue: "submitted",
     },

@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from "react";
-import { OFFICES } from "../data/offices";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import api from "../api/client";
+import { useAuth } from "./AuthContext";
 
 const ClearanceFormContext = createContext(null);
 
@@ -10,63 +11,113 @@ const initialFormData = {
   documents: { finance: [], library: [], department: [], studentAffairs: [] },
 };
 
-const initialStages = Object.fromEntries(
-  OFFICES.map((o) => [o.key, { status: "not_started", note: "" }])
-);
-
+// Holds two things for the logged-in student:
+//  1. formData    — what they are typing in the wizard (kept in memory,
+//                   including the File objects, until they submit)
+//  2. application — their real clearance request as stored on the server
+//                   (GET /api/clearance/me), with every office's stage
 export function ClearanceFormProvider({ children }) {
+  const { user } = useAuth();
+  const isStudent = user?.role === "student";
+
   const [formData, setFormData] = useState(initialFormData);
-  const [stages, setStages] = useState(initialStages);
+  const [application, setApplication] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [wizardStarted, setWizardStarted] = useState(false);
 
-  // NEW: tracks whether the student has ever reached the wizard, so the
-  // Sidebar can lock Clearance request / Progress / Correction until
-  // this is true — gates BOTH the button click AND someone typing the
-  // wizard URL directly (see PersonalInfoStep, which sets this on mount).
-  const [hasStarted, setHasStarted] = useState(false);
+  const refresh = useCallback(async () => {
+    try {
+      const { data } = await api.get("/clearance/me");
+      setApplication(data.application);
+      setLoadError("");
+      return data.application;
+    } catch (error) {
+      setLoadError(error.response?.data?.message || "Could not load your clearance request.");
+      return null;
+    } finally {
+      setHasLoaded(true);
+    }
+  }, []);
 
-  const updateSection = (section, patch) => {
+  // Load the student's request after login; clear everything on logout so
+  // one student's data never shows up for the next person on the computer
+  useEffect(() => {
+    if (isStudent) {
+      setHasLoaded(false);
+      refresh();
+    } else {
+      setApplication(null);
+      setFormData(initialFormData);
+      setWizardStarted(false);
+      setHasLoaded(false);
+    }
+  }, [isStudent, user?.id, refresh]);
+
+  const updateSection = useCallback((section, patch) => {
     setFormData((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }));
-  };
+  }, []);
 
-  const startClearance = () => setHasStarted(true);
+  // Marks the wizard as started so the Sidebar unlocks the other screens
+  const startClearance = useCallback(() => setWizardStarted(true), []);
 
-  const submitClearance = () => {
-    setStages((prev) => {
-      const next = { ...prev };
-      OFFICES.forEach((o) => {
-        if (!o.isFinalizer) next[o.key] = { status: "pending", note: "" };
-      });
-      return next;
+  const resetForm = useCallback(() => setFormData(initialFormData), []);
+
+  // Sends the whole wizard to POST /api/clearance as multipart/form-data.
+  // Throws on failure so ReviewStep can keep the student's data on screen.
+  const submitClearance = useCallback(async () => {
+    const body = new FormData();
+    body.append("email", formData.personal.email.trim());
+    body.append("phone", formData.personal.phone.trim());
+    body.append("yearOfStudy", formData.academic.yearOfStudy);
+    body.append("graduationYear", formData.academic.graduationYear);
+    body.append("reason", formData.details.reason);
+    body.append("notes", formData.details.notes);
+
+    // One file field per office, named after the office key (finance, library, ...)
+    Object.entries(formData.documents).forEach(([officeKey, files]) => {
+      files.forEach((file) => body.append(officeKey, file));
     });
-  };
 
-  const resubmitStage = (officeKey) => {
-    setStages((prev) => ({ ...prev, [officeKey]: { status: "pending", note: "" } }));
-  };
+    const { data } = await api.post("/clearance", body);
+    setApplication(data.application);
+    setFormData(initialFormData);
+    return data.application;
+  }, [formData]);
 
-  const setStageStatus = (officeKey, status, note = "") => {
-    setStages((prev) => ({ ...prev, [officeKey]: { status, note } }));
-  };
+  // Responds to a correction request / rejection for one stage
+  const resubmitStage = useCallback(async (stageId, files, message) => {
+    const body = new FormData();
+    files.forEach((file) => body.append("files", file));
+    if (message.trim()) body.append("message", message.trim());
 
-  // FIXED: this used to also reset `stages`, which meant calling this
-  // right after submitClearance() (in ReviewStep) instantly wiped the
-  // "pending" statuses it had just set — Dashboard/Progress would show
-  // "not submitted" forever, even after a real submission. Now this only
-  // clears what the student TYPED, not the workflow state offices see.
-  const resetForm = () => setFormData(initialFormData);
+    const { data } = await api.post(`/clearance/stages/${stageId}/resubmit`, body);
+    setApplication(data.application);
+    return data.application;
+  }, []);
 
-  return (
-    <ClearanceFormContext.Provider
-      value={{
-        formData, updateSection,
-        stages, submitClearance, resubmitStage, setStageStatus,
-        hasStarted, startClearance,
-        resetForm,
-      }}
-    >
-      {children}
-    </ClearanceFormContext.Provider>
+  // Stages keyed by office key, e.g. stages.finance.status
+  const stages = useMemo(
+    () => Object.fromEntries((application?.stages || []).map((s) => [s.office.slug, s])),
+    [application]
   );
+
+  const value = {
+    formData,
+    updateSection,
+    resetForm,
+    application,
+    stages,
+    hasLoaded,
+    loadError,
+    refresh,
+    submitClearance,
+    resubmitStage,
+    hasStarted: wizardStarted || Boolean(application),
+    startClearance,
+  };
+
+  return <ClearanceFormContext.Provider value={value}>{children}</ClearanceFormContext.Provider>;
 }
 
 export function useClearanceForm() {
